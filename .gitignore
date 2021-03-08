@@ -2,5 +2,6 @@
 ltximg
 /practicals
 *.tex
+*.key
 certs
 *#
