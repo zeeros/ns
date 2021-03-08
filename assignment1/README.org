@@ -1,0 +1,482 @@
+# -*- org-export-babel-evaluate: nil -*-
+#+TITLE: First assignment
+
+[[https://classroom.google.com/u/1/c/Mjc0MDYyNzE0Njcy/a/Mjc0MDYyNzE0Njc3/details][Link for submission]]
+
+* Task steps
+** DONE Install a web server
+** DONE Protect the access to a web page by means of a password and a captcha (i.e., reCAPTCHA).
+** DONE Connect via browser to that captcha and password-protected webpage
+** DONE Sniff the traffic between browser and web server and capture the password
+** DONE Configure the web server to use dual authentication using TLS (thus using digital certificates)
+** DONE Show that sniffing the traffic now does not reveal the password
+** TODO Record a video of max 3 minutes showing your working solutions and configurations
+** TODO Submit your video to the classroom
+** Deadline 10th March at 15.00
+* Node.js + NGINX + Docker
+
+We are going to use
+- Node.js :: An open-source JavaScript back-end runtime environment.
+- NGINX :: An open-source web server that also serves as a reverse proxy and HTTP load balancer.
+  - Web server :: A server that satisfies HTTP requests
+  - Reverse proxy :: A server that sits in front of one or more web servers to provide
+    - Security :: Hide the IP address of the web server
+    - TLS support :: Handle encryption of outgoing responses and decryption of incoming requests using TLS
+    - HTTP load balancing :: Handle HTTP traffic with multiple web servers
+- Docker Engine and Docker Compose :: An open-source software engine used to host containers, Docker Compose provides orchestration
+
+Why NGINX + Node.js? NGINX can
+- Worry about starting as root, binding to port 80, and then relinquishing its root privileges. So the Node app doesn't have to worry about it.
+- Serve static files like images, css, js, and html more efficiently then Node.
+- Display meaningful error pages or fall back onto a static site if Node crashes.
+- Help to mitigate security flaws and DoS attacks against Node.
+
+Why Dockerizing this? Here, the only reason is to provide a self-contained and reproducible environment to play with.
+
+* mTLS
+
+In short, with mutual TLS
+1. Both client and server present a public certificate
+2. Both validate the certificate chain
+3. Negotiation continues with TLS
+
+Certificates are issued by a trusted CA (Certificate Authority). While the CA should be an independent entity, in this case we are going to designate ourselves as a CA.
+
+We are going to store all the certificates and related files here
+
+#+BEGIN_SRC sh :session s :results output drawer
+CERTS="./nginx/certs"
+#+END_SRC
+
+#+RESULTS:
+:results:
+:end:
+
+** Certificate Authority
+
+We generate a key
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl genrsa -des3 -out ${CERTS}/ca.key 4096
+#+END_SRC
+
+#+RESULTS:
+:results:
+Generating RSA private key, 4096 bit long modulus (2 primes)
+.................................................................................................................++++
+..........................................................................................................................................................................................................................................................++++
+e is 65537 (0x010001)
+Enter pass phrase for ./nginx/certs/ca.key:
+Verifying - Enter pass phrase for ./nginx/certs/ca.key:
+:end:
+
+And use it to generate a certificate, we set its =Organization Name= as ~CertAuth~
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl req -new -x509 -days 3650 -key ${CERTS}/ca.key -out ${CERTS}/ca.crt
+#+END_SRC
+
+And the =.pem= file will include both
+
+#+BEGIN_SRC sh :session s :results output drawer
+cat ${CERTS}/ca.key > ${CERTS}/ca.pem
+cat ${CERTS}/ca.crt >> ${CERTS}/ca.pem
+#+END_SRC
+
+#+RESULTS:
+:results:
+:end:
+
+** Client
+
+We generate a key
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl genrsa -des3 -out ${CERTS}/client.key 4096
+#+END_SRC
+
+
+#+RESULTS:
+:results:
+Generating RSA private key, 4096 bit long modulus (2 primes)
+...........................................................++++
+.............++++
+e is 65537 (0x010001)
+Enter pass phrase for ./nginx/certs/client.key:
+Verifying - Enter pass phrase for ./nginx/certs/client.key:
+:end:
+
+The certificate must be approved by a CA, so we first generate a CSR (Certificate Signing Request) setting the =Organization Name= as ~Client~
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl req -new -key ${CERTS}/client.key -out ${CERTS}/client.csr
+#+END_SRC
+
+And use it to generate a client certificate
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl x509 -req -days 365 -in ${CERTS}/client.csr -CA ${CERTS}/ca.crt -CAkey ${CERTS}/ca.key -set_serial 01 -out ${CERTS}/client.crt
+#+END_SRC
+
+#+RESULTS:
+:results:
+Signature ok
+subject=C = AU, ST = Some-State, O = Client
+Getting CA Private Key
+Enter pass phrase for ./nginx/certs/ca.key:
+:end:
+
+We can now verify if the generated certificate can be decrypted using the CA certificate
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl verify -verbose -CAfile ${CERTS}/ca.crt ${CERTS}/client.crt
+#+END_SRC
+
+#+RESULTS:
+:results:
+./nginx/certs/client.crt: OK
+:end:
+
+If the client uses a web browser a =.PFX= file format is needed
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl pkcs12 -export -out ${CERTS}/client.pfx -inkey ${CERTS}/client.key -in ${CERTS}/client.crt -certfile ${CERTS}/ca.crt
+#+END_SRC
+
+#+RESULTS:
+:results:
+Enter pass phrase for ./nginx/certs/client.key:
+Enter Export Password:
+Verifying - Enter Export Password:
+:end:
+
+** Server
+
+We generate a key
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl genrsa -des3 -out ${CERTS}/server.key.org 4096
+#+END_SRC
+
+#+RESULTS:
+:results:
+Generating RSA private key, 4096 bit long modulus (2 primes)
+........................................................................................................................................................++++
+.........................................................++++
+e is 65537 (0x010001)
+Enter pass phrase for ./nginx/certs/server.key.org:
+Verifying - Enter pass phrase for ./nginx/certs/server.key.org:
+:end:
+
+We can remove the PEM passphrase with the following command (read [[NGINX and PEM password prompting][here]] why).
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl rsa -in ${CERTS}/server.key.org -out ${CERTS}/server.key
+#+END_SRC
+
+#+RESULTS:
+:results:
+Enter pass phrase for ./nginx/certs/server.key.org:
+writing RSA key
+:end:
+
+The certificate must be approved by a CA, so we first generate a CSR (Certificate Signing Request) setting the =Organization Name= as ~Server~ and the =Common Name= as ~localhost~
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl req -new -key ${CERTS}/server.key -out ${CERTS}/server.csr
+#+END_SRC
+
+And use it to generate a server certificate
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl x509 -req -days 365 -in ${CERTS}/server.csr -CA ${CERTS}/ca.crt -CAkey ${CERTS}/ca.key -set_serial 10 -out ${CERTS}/server.crt
+#+END_SRC
+
+#+RESULTS:
+:results:
+Signature ok
+subject=C = AU, ST = Some-State, O = Server, CN = localhost
+Getting CA Private Key
+Enter pass phrase for ./nginx/certs/ca.key:
+:end:
+
+We can now verify if the generated certificate can be decrypted using the CA certificate
+
+#+BEGIN_SRC sh :session s :results output drawer
+openssl verify -verbose -CAfile ${CERTS}/ca.crt ${CERTS}/server.crt
+#+END_SRC
+
+#+RESULTS:
+:results:
+./nginx/certs/server.crt: OK
+:end:
+* NGINX dockerized proxy
+
+The NGINX server will provide
+- The "Basic" HTTP authentication
+- Dual authentication with TLS
+
+We generate a ~.htpasswd~ file to store an encrypted password for the user-id ~user~.
+The password is prompted by the following command.
+
+#+BEGIN_SRC sh :session s :results output drawer
+htpasswd -n user > ./nginx/.htpasswd
+cat ./nginx/.htpasswd
+#+END_SRC
+
+
+#+RESULTS:
+:results:
+New password:
+Re-type new password:
+user:$apr1$hGNDxaCV$Xy50zFMco00QIed0MKS0Q.
+:end:
+
+We provide two distinct configuration files for NGINX
+- noTLS :: With no encryption mechanism
+- TLS :: Using two-way TLS
+
+#+BEGIN_SRC sh :results output drawer
+cat ./nginx/noTLS.conf
+#+END_SRC
+
+#+RESULTS:
+:results:
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_pass http://nodeserver:5000;
+
+	auth_basic "Restricted Content";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+    }
+}
+:end:
+
+#+BEGIN_SRC sh :results output drawer
+cat ./nginx/TLS.conf
+#+END_SRC
+
+#+RESULTS:
+:results:
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_pass http://nodeserver:5000;
+
+	auth_basic "Restricted Content";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+    }
+}
+:end:
+
+Note that in both configurations NGINX is
+- Providing 'Basic' HTTP Authentication using the username and password previously stored.
+- Proxying requests to http://nodeserver:5000, since ~nodeserver~ is the name we are going to use as a reference for the Node.js app when wrapping everyhing together with [[* Orchestration][Docker Compose]].
+
+The custom image will include
+- default.conf :: Copied either from ~noTLS.conf~ or ~TLS.conf~ depending on the value of ~CONFIGURATION~, that will be later set by [[* Orchestration][Docker Compose]]
+- .htpasswd :: Flat-file storing user-id and password for basic authentication of HTTP users
+
+#+BEGIN_SRC sh :results output drawer
+cat ./nginx/Dockerfile
+#+END_SRC
+
+#+RESULTS:
+:results:
+FROM nginx
+ARG CONFIGURATION
+COPY $CONFIGURATION.conf /etc/nginx/conf.d/default.conf
+COPY .htpasswd /etc/nginx/.htpasswd
+COPY ./certs/ /etc/nginx/certs/
+:end:
+
+** NGINX and PEM password prompting
+
+#+BEGIN_QUOTE
+Starting nginx: Enter PEM pass phrase:
+#+END_QUOTE
+
+In NGINX, the message above is displayed when booting (or rebooting). This requires human intervention, something that can be a problem in several situations. In our specific case, this behaviour interferes with Docker when instances are started up. Some solutions may be
+
+1. Remove the passphrase from the server key and prevent unathorized users to gain =root= access look into NGINX configuration. In this case it is essencial to prevent any unauthorized user to gain root access.
+2. Set a =ssl_password_file= in NGINX configuration to separately distribute it from the configuration file.
+3. Prevent storing passwords in the disk with a password distribution policy.
+
+In the end this is just a test case, so we will stick to the first option.
+
+* Node.js dockerized app
+
+The Node.js app will provide
+- The reCAPTCHA challenge
+- The protected page when the challenge is completed
+
+The custom image will include
+- *.html :: All the required pages
+- package.json :: Specifies the app manifest, with the related dependencies
+- server.js :: The actual app
+- .recaptcha.key :: The secret key used by the app, previously obtained by [[http://www.google.com/recaptcha/admin][signing up for an API key pair]].
+
+#+BEGIN_SRC sh :results output drawer
+cat ./app/Dockerfile
+#+END_SRC
+
+#+RESULTS:
+:results:
+FROM node:14
+# Create app directory
+WORKDIR /usr/src/app
+# Install app dependencies
+COPY package.json ./
+RUN npm install
+COPY *.html .recaptcha.key package.json server.js ./
+EXPOSE 5000
+CMD [ "node", "server.js" ]
+:end:
+
+* Orchestration
+
+Below the configuration provided for orchestration.
+
+#+BEGIN_SRC sh :results output drawer
+cat ./docker-compose.yml
+#+END_SRC
+
+#+RESULTS:
+:results:
+version: '3'
+services:
+    nodeserver:
+        restart: always
+        build:
+            context: ./app
+    nginxproxy:
+        restart: always
+        build:
+            context: ./nginx
+        ports:
+            - "80:80"
+            - "443:443"
+        depends_on:
+            - nodeserver
+        extra_hosts:
+            - "nginx.ssl.org:127.0.0.1"
+:end:
+
+The following command runs the configuration above.
+
+#+BEGIN_SRC sh :results output drawer
+docker-compose up --build --force-recreate --detach
+#+END_SRC
+
+#+RESULTS:
+:results:
+Step 1/7 : FROM node:14
+ ---> 7bef16bb2cf1
+Step 2/7 : WORKDIR /usr/src/app
+ ---> Using cache
+ ---> 782366837527
+Step 3/7 : COPY package.json ./
+ ---> Using cache
+ ---> 4d0fa9154572
+Step 4/7 : RUN npm install
+ ---> Using cache
+ ---> 7e2569423eef
+Step 5/7 : COPY *.html .recaptcha.key package.json server.js ./
+ ---> Using cache
+ ---> ea2079653467
+Step 6/7 : EXPOSE 5000
+ ---> Using cache
+ ---> a98180887664
+Step 7/7 : CMD [ "node", "server.js" ]
+ ---> Using cache
+ ---> a6aafaf548dd
+Successfully built a6aafaf548dd
+Successfully tagged assignment1_nodeserver:latest
+Step 1/5 : FROM nginx
+ ---> 35c43ace9216
+Step 2/5 : COPY default.conf /etc/nginx/conf.d/default.conf
+ ---> Using cache
+ ---> 2023311c90a8
+Step 3/5 : COPY .htpasswd /etc/nginx/.htpasswd
+ ---> Using cache
+ ---> a64a36760ab4
+Step 4/5 : COPY --chown=777 ./certs/server.* /etc/nginx/certs/
+ ---> Using cache
+ ---> b59064efc6a9
+Step 5/5 : COPY --chown=777 ./certs/ca.crt /etc/nginx/certs/
+ ---> Using cache
+ ---> 5dadc7a78330
+Successfully built 5dadc7a78330
+Successfully tagged assignment1_nginxproxy:latest
+:end:
+
+We can stop the containers with the following command
+
+#+BEGIN_SRC sh :results output drawer
+docker-compose down
+#+END_SRC
+
+#+RESULTS:
+:results:
+:end:
+
+* Test
+
+In our local environment tests have been conducted with
+- Firefox 86.0 :: To connect to
+  - http://localhost/ :: No specific setting is required
+  - https://localhost/ :: We first need to (at Tools > Options > Advanced > Certificates: View Certificates)
+    - Add our ~client.pfx~ file as a certificate
+    - Set the trust setting for our private CA (that is ~CertAuth~) to identify websites
+- Wireshark 3.4.2 :: We sniff the traffic going through the interface created by Docker Compose.
+
+Before sniffing, we first get the IP addresses used by the containers inside the Dockor Compose network.
+
+#+BEGIN_SRC sh :results output drawer
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' assignment1_nginxproxy_1
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' assignment1_nodeserver_1
+#+END_SRC
+
+#+RESULTS:
+:results:
+172.20.0.3
+172.20.0.2
+:end:
+
+** HTTP
+
+#+CAPTION: The credentials are sent as plain text
+[[./http.jpg]]
+
+** HTTPS
+
+
+#+CAPTION: The credientals are part of the encrypted content
+[[./https.jpg]]
+
+#+CAPTION: Between the NGINX proxy and the Node.js server communication is still decrypted, but the only point of access from outside is the proxy server.
+[[./http_proxy_server.jpg]]
+
+* References
+- [[https://ashwin9798.medium.com/nginx-with-docker-and-node-js-a-beginners-guide-434fe1216b6b][NGINX with Docker and Node.js — a Beginner’s guide]]
+- [[https://stackoverflow.com/questions/16770673/using-node-js-only-vs-using-node-js-with-apache-nginx][Using Node.js only vs. using Node.js with Apache/Nginx]]
+- [[https://dev.to/darshitpp/how-to-implement-two-way-ssl-with-nginx-2g39#fn2][How To Implement Two Way SSL With Nginx]]
+- [[https://smallstep.com/hello-mtls/doc/server/nginx][Configuring Your Nginx Server for Mutual TLS]]
+- [[https://www.nginx.com/blog/secure-distribution-ssl-private-keys-nginx/#Summary][Secure Distribution of SSL Private Keys with NGINX]]
+- [[https://webmasters.stackexchange.com/a/1254][Can I skip the PEM pass phrase question when I restart the webserver?]]
+- [[https://futurestud.io/tutorials/how-to-remove-pem-password-from-ssl-certificate][How to Remove PEM Password From SSL Certificate]]

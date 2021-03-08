@@ -1,0 +1,17 @@
+version: '3'
+services:
+    nodeserver:
+        restart: always
+        build:
+            context: ./app
+    nginxproxy:
+        restart: always
+        build:
+            context: ./nginx
+        ports:
+            - "80:80"
+            - "443:443"
+        depends_on:
+            - nodeserver
+        extra_hosts:
+            - "nginx.ssl.org:127.0.0.1"
