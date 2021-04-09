@@ -1,0 +1,15 @@
+#+TITLE: Lab discussion
+
+* Info
+
+- Duration between 1:45-2:00h (a rehearsal is highly suggested)
+- The presentation must be shared at least one day before the lab, with any dependency needed to run the lab
+- The report must be delivered the day after the lab. More or less 10 pages, should allow anybody not attending the class to do the same exercises
+- Evaluation is individual, and every team member must take part at the presentation
+
+* Possible lab structure
+- Brief introduction :: What is vulnerability assesment? And what is OpenVAS?
+- Exercises proposal :: We can propose 3 exercises
+  - All the exercises require one VM with OpenVAS and one VM acts as the target
+  - With each exercise we should aim at a sweet spot between triviality and heaviness
+  - A 4th exercise may be proposed if some time is left
