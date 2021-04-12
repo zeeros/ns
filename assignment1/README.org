@@ -1,16 +1,6 @@
 # -*- org-export-babel-evaluate: nil -*-
 #+TITLE: First assignment
 
-* Task steps
-** DONE Install a web server
-** DONE Protect the access to a web page by means of a password and a captcha (i.e., reCAPTCHA).
-** DONE Connect via browser to that captcha and password-protected webpage
-** DONE Sniff the traffic between browser and web server and capture the password
-** DONE Configure the web server to use dual authentication using TLS (thus using digital certificates)
-** DONE Show that sniffing the traffic now does not reveal the password
-** TODO Record a video of max 3 minutes showing your working solutions and configurations
-** TODO Submit your video to the classroom
-** Deadline 10th March at 15.00
 * Node.js + NGINX + Docker
 
 We are going to use
