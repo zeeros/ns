@@ -1,3 +1,0 @@
-#+title: OpenVAS Lab - Network Security
-
-Notes and code of the OpenVAS lab for the Network Security class.
