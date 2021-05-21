@@ -1,3 +1,30 @@
-#+title: Notes on Network Security
+#+TITLE: Notes on Network Security
 
 Collection of notes and code about the Network Security course, part of the Master in Computer Science at the Università di Trento (UNITN).
+
+* Introduction
+** [[file:notes/netsec_fundamentals.org][Network security fundamentals]]
+** Attacker Models
+* Network aspects
+** TCP/IP protocol 101
+** IPSec
+** Contact tracing
+* Vulnerabilities
+** Configuration vulnerabilities and attack surfaces
+** Vulnerabilities in software
+** Vulnerability management
+* Attacks
+** Network attacks
+** Malware
+** Drvie-by downloads & exploit kits
+** Botnets
+* Defensive technologies
+** System hardening
+** Firewalls
+** IDSs
+** Advanced memory techniques
+* Privacy in networks
+** Honest-but-curious attackers
+** Tracking/fingerprinting
+** Applications of crypto
+** VPNs/TOR
