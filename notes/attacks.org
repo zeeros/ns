@@ -1,0 +1,57 @@
+#+TITLE: Malware
+
+* Basic malware model
+
+A *malware* is a malicious program acting with no conscious or designed authorization. Malwares may need an host (e.g viruses, logic bombs, backdoors) or be independent self-contained programs (e.g. worms, bots), possibly with replicating capabilities.
+- Keylogger :: Logs input to catch sensitive data and stor eit remotely. Today keyloggers exploit lousy devices control of modern OSs (for performance reasons) to act in user mode with no special privilege.
+- Ransomware :: Blocks access to a system until a sum of money is paid.
+- Viruses :: Installs an replicates itself with no user consent using. Its characterized by an infection mechanism, trigger and payload and can either prepend, postpend or embed an infected program.
+  - Macro virus :: Exploit macro capabilities for office suite in any OS.
+  - Email virus :: Delivered as an email attachment, spreads itself to the contact list.
+  - Boot sector virus :: Manages to write to the MBR to comprimise the boot chain and load a modified kernel.
+- Rootkit :: Injects the kernel by controlling the MBR, with no replication capabilities
+- Worms :: Replicating programs that propagate over the network, often used for DoS attacks. The propagation phase follows a logistic curve.
+
+* Botnets
+
+A *bootent* is a network of infected peers that are instructed by a bot herder to deliver coordinated actions (DDoS attacks, spam, computational power, rental). The bootnet may have two possible architectures
+- Central :: Simpler to manage, but with a single point of failure (by sinkholing) that must be protected with
+  - Fast-flux :: Frequent changes of IP, cheap
+  - Domain-flux :: Frequent changes of domain name (more expensive), the bots use a Domain Generation Algorithm (DGA) to guess the current domain name. Around 2009 *Torpig*, a centralized botnet, used a rootkit (Mebroot) to load himself from the internet during system boot, being able to steal credentials and deliver phishing attacks. Its sinkholing was delivered by reverse engineering the DGA, finding a set domain that was going to be used but not registered yet and impersonate the central server.
+- P2P :: More robust, relies on a recruiting system such as
+  - Parasite :: Bots are selected from a list of vulnerable hosts limited to an existing network.
+  - Leeching :: Use an existing network to enlist bots in or out of the network.
+  - Bot-only :: An ad-hoc network is built among the bots.
+
+** Countermeasures evolution
+
+Virus detection evolution
+- Signature scanners :: Try to match a signature of known malwares, only a reaction system for known malwares.
+- Heuristics :: Identify footprints for viruses with common characteristics with partial matching.
+- Generic decryption :: Addresses polymorphic viruses (encryption to obfuscate code), detection is executed in RAM (where the code must be encrypted) in an isolated sandbox.
+- Behavioural detection :: Addresses metamorphic viruses (rewriting themself), detection is based on a set of actions that malware performs.
+- ML use :: Use classification to identify malwares, also may have predictive behaviour.
+
+* Propagation model
+
+An *Advanced Persistent Threat* (*APT*) is a stealthy threat actor, typically a nation state or state-sponsored group, which gains unauthorized access to a computer network and remains undetected for an extended period.
+
+An *attack chain* usually involves reconnaissance (to gather information), weaponization (couple exploit with malware), delivery (identify attack vector), exploitation, installation, c2 channel (command and control channel) and deliver actions. The attack is delivered in a *persistent* way, take even years to prepare, infect, expand and exfiltrate.
+
+Usually *chained exploit* are used to deliver attacks, something that CVSS scoring systems can't actually capture.
+
+** Stuxnet
+
+The *Stuxnet* malware was used against an iranian nuclear plant delivered in a multi-stage way
+- Phase 1 :: Kind of normal worm that simply spreads and evaluates the scenario.
+- Phase 2 :: Manages to breach the Siemens PLC system (industrial system).
+- Phase 3 :: Search for the centrifuges (target) and, when found, changes their speed.
+
+Enourmous resources were necessary to deliver this type of attack, probably supported by states.
+
+** Mirai
+
+An example of malware targeting IoT devices is the *Mirari* botnet
+
+#+CAPTION: The attacker targets an IoT via telnet and guesses credentials by brute force, installing the malware and reporting details of the new victim to a report server. The C2 server is aware of the overall status, and as soon as enough devices are compromised it launches the attack.
+[[./img/mirai.jpg]]

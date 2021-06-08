@@ -1,0 +1,162 @@
+#+TITLE: Vulnerabilities
+
+* Overview
+
+A *bug* is a problem in the execution of the software that leads to unexpected behaviour. The problem must be replicable, meaning that in the same conditions the same unexpected behaviour manifests. If the problem is documented, its not a bug but a *feature*. A bug is characterized by
+- Type :: Logic, configuration, design, implementation
+- Fix priority :: Ranks how severe the bug is
+
+
+A *vulnerability* is a bug that causes a security breach or a violation of the system's security policy. Vulnerabilities can involve configuration, infrastructure or software, but our focus will be on software vulnerabilties.
+
+The grand majority of vulnerabilities are *undisclosed*, many organizations (such as MITRE) try to disclose them resulting in an increasing number of disclosed vulnerabilities each year.
+
+* Discovery
+
+Vulnerabilities may be discovered
+- Internally :: With a Quality and Assurance (Q&A) process, once the vulnerability is patched the customer must be informed.
+- Externally :: Today vendors are liable for their vulnerabilities, some companies take part to a bounty market where white hat hackers are reward for finding new vulnerabilities.
+
+** Tools and techniques
+
+The standard, dull way to search for vulnerabilities is via
+- Vulnerability scanning :: Check and report using a knowledge base of vulnerabilities with no exploitation (e.g. OpenVAS, Metasploit) with two possible mode.
+  - Black box :: Scan made by an external entity with no privileged knowledge.
+  - Grey box :: Scan made by an internal or partially internal user, requiring a non-disclosure agreement (NDA).
+- Penetration testing :: Given a list of vulnerabilities, test their exploitability without concluding the attack at the very end (e.g. Metasploit). A NDA is always required.
+
+When running these tools, the real difference is made by who is actually running them: the expertise of the tester can enhance the baseline of the tool. Whoever, given the large amount possible vulnerabilities, a team of specialized experts is usually required to discover the most insidious vulnerabilities. A vertical, deep, low-level understanding of the system/software design is often required. Uncommon skills may be required to find many vulnerabilities.
+
+* Handling
+
+The ISO 30111 standard is one of the standards regulating vulnerability handling by regulating the following phases
+- Acceptance :: Provide entry points for internal or external sources to report vulnerabilities.
+- Verification :: A report is investigated to find out if it is a vulnerability, if it affects a supported version of some software the vendor maintains, if it is exploitable. At this point, a root cause analysis is conducted and possibly identify similar vulnerabilities. Finally, the threat should evaluated and its solution proritized.
+- Resolution :: A solution to the vulnerability is defined depending on its type
+  - Configuration :: Simply provide guidelines/advises for a correct configuration.
+  - Code :: Provide a patch, timing depends on release schedule.
+  - Critical :: Provide mitigations before patch is released.
+- Release :: Once the resolution has been tested, they can be released via different channels
+  - Push to web-services :: Customer subscribes to the service and receives the patch.
+  - Pull stand-alone product :: Customer has to actively reach the new product version.
+- Post-release :: Provide customer support.
+
+* Disclosure
+
+The ISO 29147 standard regulates the information exchange between vulnerability finders, vendors and possible coordinators. Related to de-facto standards include STIX and TAXII.
+
+[[./img/iso29147.jpg]]
+
+
+Reports on vulnerabilities contain *confidential information* that is considered sensitivel by vendors, so reporting should happen only through a secure communication channel. Depending on the vendors policies, information about the vulnerability may be (or not) published, if so always after a patch release.
+
+The *reward system* can be tricky since external finders have to communicate only the right amount of info to get rewarded. Agreement between researcher and vendor must be protected. Often a third party mediator is involved to hold the vulnerability info for a certain amount of time (60-90 days), and after this period the vulnerability is disclosed. Also the notion of fair reward is controversial (e.g. money, credits).
+
+A *zero day vulnerability* is a vulnerability disclosed before a patchfor it is released and are the target of the most effective and interesting attacks.
+
+Vulnerabilities may be disclosed via a
+- Public database :: National Vulnerability Database (NDV), a public NIST-maintained database of discosed vulnerabilities. Each entry has a Common Platform Enumeration (CPE), a list of systems affected by the vulnerability (provided by vendors, not always reliable).
+- Private feeds :: Specialized, paid services that release weekly/monthly information.
+
+Several communities and initiatives have been trying to classify vulnerabilities
+- Open Web Application Security Project (OWASP), now quite outdated
+- Common Weakness Enumeration (CWE)
+
+The Computer Security Incident Response Team (CSIRT) is an export group that handles security incidents and can contacted to report vulnerabilities when the organization doesn't provide an access point to do so.
+* Grading
+
+A common metrics system should provide a consistent severity assessment and communication. The *Common Vulnerability Scoring System* (*CVSS*) is an open framework to share characteristics and severity of vulnerabilities.
+
+With *CVSS v3* three metric groups (base, temporal, environmental) are used to target different characteristics of vulnerabilities. The base metric group targets characteristics constant over time and environment, and includes
+- Exploitability metrics :: Measuring the vulnerable component
+  - Attack vector :: May be valued as =network, adjacent network, local, physical= and expresses how far the attacker needs to be from the target.
+  - Attack complexity :: May be =high, low= and expresses the amount of conditions, out of the attacker's control, that are required for the vulnerability to be exploitable. For example, an =high= complexity might include target-specific reconnaissance (e.g. configuration, settings, sequence numbers, shared secrets), prepare the target environment (e.g. repeated exploits to win a race condition), MITM.
+  - Priviliges required ::  May be =high, low, none= and describes the level of privileges required to the exploit to work.
+  - User interaction :: May be =required, none= and expressed the level of engagement of the user required for the exploit to be delivered.
+- Impact metrics :: May be =high, low, none= and measures the impact over the CIA triad for the impacted component.
+- Scope metric :: May be =unchanged, changed= and express if a scope change is required for the exploit to happen.
+  - Scope :: Set of priviliges, defined by an authority (e.g. Adobe), that grants access to some resource through identification and authorization. *Scope change* happens when a vulnerability on a component (e.g. Photoshop) affects the resources governed by another authority (e.g. Firefox).
+
+#+CAPTION: The impacted component may be different from the vulnerable one, and in this case the exploitability metrics are on the vulnerable component while the impact ones on the impacted component.
+[[./img/vulnerability_scope.jpg]]
+
+** Examples
+
+#+BEGIN_QUOTE
+Microsoft Word 2003 SP2 and SP3 on Windows XP SP3 allows remote attackers to cause a denial of service (CPU consumption) via a malformed .docfile containing an embedded image, as demonstrated by word2003forkbomb.doc, related to a "fork bomb" issue.
+#+END_QUOTE
+
+| Access vector       | local     |
+| Access complexity   | low       |
+| Privileges required | none      |
+| user interaction    | required  |
+| Scope               | unchanged |
+| Confidentility      | none      |
+| Integrity           | none      |
+| Availability        | high      |
+
+#+BEGIN_QUOTE
+Cisco Nexus 1000V Virtual Ethernet Module (VEM) 4.0(4) SV1(1) through SV1(3b), as used in VMware ESX 4.0 and 4.1 and ESXi4.0 and 4.1, does not properly handle dropped packets, which allows guest OS users to cause a denial of service (ESX or ESXihost OS crash) by sending an 802.1Q tagged packet over an access vEthernetport,aka Cisco Bug ID CSCtj17451.
+#+END_QUOTE
+
+| Access vector       | adjacent network |
+| Access complexity   | low              |
+| Privileges required | none             |
+| user interaction    | none             |
+| Scope               | changed          |
+| Confidentility      | none             |
+| Integrity           | none             |
+| Availability        | high             |
+#+TBLFM:
+
+#+BEGIN_QUOTE
+Stack-based buffer overflow in Adobe Reader and Adobe Acrobat 9 before 9.1, 8 before 8.1.3 , and 7 before 7.1.1 allows remote attackers to execute arbitrary code via a crafted argument to the getIconmethod of a Collabobject, a different vulnerability than CVE-2009-0658.
+#+END_QUOTE
+
+| Access vector       | network   |
+| Access complexity   | low       |
+| Privileges required | none      |
+| user interaction    | none      |
+| Scope               | unchanged |
+| Confidentility      | high      |
+| Integrity           | high      |
+| Availability        | high      |
+
+#+BEGIN_QUOTE
+libvirt, possibly before 0.9.12, does not properly assign USB devices to virtual machines when multiple devices have the same vendor and product ID, which might cause the wrong device to be associated with a guest and might allow local users to access unintended USB devices.
+#+END_QUOTE
+
+| Access vector       | local  |
+| Access complexity   | high   |
+| Privileges required | low    |
+| user interaction    | none   |
+| Scope               | change |
+| Confidentility      | low    |
+| Integrity           | low    |
+| Availability        | low    |
+
+* Vulnerability management
+
+#+CAPTION: Management view of the vulnerability management cycle wiht the ISO 29147/30111 standard.
+[[./img/vm_cycle.jpg]]
+
+* Social engineering
+
+Security is always about users, so people, and their interaction with systems is a key aspect of security: attacks are usually delivered at the weakest, less expensive link of the system chain, and often people are part of it. Often organizations overlook the human element (cit. Mitnick).
+
+In information security, *social engineering* is used to decept individuals into sharing confidential or personal information that can be use for fraudulent actions. The means include technical, non-technical and manipulations of social interaction as means.
+
+The *Elaboration Likelihood Model* (*ELM*) is used to decribe how stimuli influence and persuade judgement on humans through
+- Central route :: Stimuli are rationally evaluated with careful elaboration.
+- Periphal route :: Stimuli are under-analyzed with a superficial effort. This route can be used to persuade victims to act in a certain way. Human persuasion should take into account one fo the following factors: reciprocity, consistency, social proof, likeability, authority and scarcity.
+
+** Phishing
+
+With *phishing* an attacker aims to steal users credentials by replicating, using specific tools, the original website. The user, unaware of being decepted into a replica site, shares his credentials to the attacker. Phishing can also be delivered by
+- Exploiting other vulnerabilities, such as spoofing web address (a web browser vulnerability).
+- Minor differences from the original address (e.g. apps.facebook.com vs app.facebook.com).
+- Vishing (Voice phishing), smishing (SMS phishing)
+
+Attacks are usually executed in a multi-stage fashion, like in *spear phishing*
+1. An initial stage of phishing aims to collect useful information: search through open-source intelligence, plan, prepare, phishing operation, response and capture.
+2. Second stage delivers the real phishing attack: re-plan and prepare, spear phishing, response and capture, finally ending with an exploitation.

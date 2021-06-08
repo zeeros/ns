@@ -1,0 +1,127 @@
+#+TITLE: WLAN
+
+* WLAN technology
+
+Wireless Ethernet LANs are standardized by *IEEE 802.11*
+- Physical layer :: Over unlicensed bands, 2.4GHz (with 14 channels, 3 non-overlapping) and 5GHz.
+- Data link layer :: Looks similar to Ethernet (802.3).
+The *Wi-Fi* industry alliance promotes 802.11 interoperability.
+
+WLAN components include
+- Access Point (AP) :: Bridges wireless (802.11) and wired (802.3) connectivity.
+- Wireless station (STA) :: Any device with a Network Interface Card (NIC), who are identified with a MAC address.
+
+Two modes are available
+- Infrastructure mode :: Stations communicate only with APs.
+- Ad-hoc mode :: Stations communicate with each other, with no AP.
+
+Different structures are available
+- Basic Service Set (BSS) :: One AP, one or more STA. It is identified by a Basic Service Set identifier (BSSID), usually the MAC address of the AP.
+- Extended Service Set (ESS) :: Multiple APs with the same Service Set Identifier (SSID). APs in the same ESS may either belong to the same network segment or different ones.
+- Distribution network :: That is the wired network, typically Ethernet
+
+** Threats and security goals
+
+WLANs can be affected by several threats
+- Signal interception allows sniffing leaving no traces.
+- Unauthorized network access.
+- APs misconfiguration and unauthorized APs.
+- DoS by signal jamming, only limit is the proximity.
+- AP spoofing, exploiting the fact that STAs connect to AP with stronger signal.
+- MitM attack by AP, in particular with open AP.
+
+From the security point of view, WLAN protocols try to deliver
+- Data confidentiality and integrity, preventing sniffing and spoofing.
+- Access control, grant access only to authorized STAs.
+- Accounting, requiring metering abilities.
+- Authentication, for access control and accounting.
+- Availability, mitigate signal jamming.
+
+** Joining and leaving an open WLAN
+
+An AP advertises its WLAN by sending, every 50ms, beacons with the SSID.
+- Joining phase :: An unauthenticated and unassociated STA that wants to join the WLAN must
+  - Intercept the beacon and send an authentication request (just an empty message)
+  - When confirmed but the AP, send an association request
+- Leaving phase :: Both STAs and APs that leave a WLAN must explicitly state it, either with a disassociation or deauthentication notification. The result is
+
+* WPA2
+
+*Wi-Fi Protected Access 2* (*WPA2*), or *Robust Security Network* (*RSN*), is the name of IEEE standard 802.11i.
+- 802.1X for access control.
+- EAP for authentication and key exchange (e.g. EAP-TLS).
+- AES-CCMP for confidentiality and integrity.
+
+There are two possible settings: *personal setting*, for home networks, and *enterprise*. The key hierarchy for what is called *Robust Security Network* (*RSN*) is shown below. In the personal setting the PSK is equal to the PMK.
+
+#+CAPTION: A pseudo-random function (e.g. PBKDF2) takes a passphrase to generate the PSK. While all STAs share the same PSK, PTKs encrypt the actual traffic between STA and AP.
+[[./img/rsn_hierarchy.jpg]]
+
+After a STA is associated with an AP, the *4-way handshake* is executed inside an *EAPOL tunnel*
+1. AP sends $counter$ and its nonce $N_{AP}$ (to prevent replay attacks).
+2. STA can now compute the $PTK$, and replies with $counter$, its nonce $N_{STA}$ and a message integrity code for the current frame (a MAC) $MIC_{KCK}(frame)$.
+3. AP can now compute the $PTK$, and replies to provide a proof of knowledge
+4. STA sends also a proof of knowledge
+
+#+CAPTION: The 4-way handshake to compute the pair-wise temporal key PTK
+[[./img/wpa2_4whs.jpg]]
+
+The whole key management is affected by several weaknesses related to the use of *passphrases* (in general, a weak defense)
+- PSK is used fro both Authentication phase and encryption.
+- By capturing message 3 and 4 of the 4-way handshake with a deauthentication, one can execute (offline) a dictionary attack and validate the guess.
+- No forward secrecy if the passphrase is guessed, for any past, present, future, exchange.
+
+* WPA3
+
+** Open network
+
+WPA3 introduces a new mode, *Opportunistic Wireless Encryption* (*OWE*), that doesn't involve any password and uses DH for key exchange between APs and STAs.
+
+[[./img/wpa3_4whs.jpg]]
+
+A non-authenticated DH is used, so MITM attack can be delivered. Still it is an improvement on WPA2, since the attacker needs to be active (no offline dictionary attack) and there is forward secrecy.
+
+WPA3 uses *Dragonfly*, a Password Authenticated Key Exchange (PAKE), to combining OWE with the use of a passphrase and implement a ADH key exchange. This mode prevents offline dictionary attacks to take place.
+
+*** Key Reinstallation AttaCK
+
+With *Key Reinstallation AttaCK* (*KRACK*) the attacker creates a rogue AP and sends spoofed management frames to deliver a MITM attack, waiting a STA to connect, with the rogue AP being able to forge the management frames (that are unprotected).
+
+A mitigation for this kind of attack is the *Protected Managment Frame* protocol 802.11w, which is adopted for a set of frames, including disassociation, de-authentication, Robust Action frames.
+
+** Enterprise network
+
+This mode provides a stronger authentication by using a server, that is not the AP, and combines 802.11 with 802.1X.
+
+The *802.1X* standard was originally designed for port-based access control for switches and modem banks, and is used here to control ports of WLAN APs.
+
+#+CAPTION: In the 802.11/802.1X, the Authentication Server (AS) authenticates the supplicant through a EAP channel.
+[[./img/802.11_802.1X.jpg]]
+
+*** EAP
+
+*Extensible Authentication Protocol* (*EAP*) provides encapsulation (without providing itself security) of authentication protocols to define generic authentication messages. EAP precedes 802.1X and uses the term peer instead of supplicant.
+
+#+CAPTION: In EAP the authenticator acts as a passthrough for the end-points, who exchange request and respone messages.
+[[./img/eap.jpg]]
+
+#+CAPTION: One of the protocols supported by EAP is TLS, that is used for the exchange between peer and EAP server.
+[[./img/eaptls.jpg]]
+
+#+CAPTION: EAP encapsulation uses EAPOL (EAP over LAN) on the 802.11 link, RADIUS over the wired network.
+[[./img/eapenc.jpg]]
+
+RADIUS is used to encapsulate EAP and uses its own protocol for shared keys for the end points. *Remote access dial-in user service* (*RADIUS*) defines messages between
+- Network Access Server (NAS) :: That in WLAN is the AP
+- Authentication Server :: Who responds to access requests with a challenge, and accept or reject message
+
+The overall context is shown below, also the certificate authorite signs certificates fro STA, AP and RADIUS server (not in the picture, seen later)
+1. Joining phase
+   - An unauthenticated and unassociated STA intercepts the beacon sent by the AP with its SSID
+   - Dealing open-authentication, the authentication request/response always succeds
+   - Association is made with AP and a port opens for 802.1X communication to communicate with RADIUS server
+2. EAPOL between STA, AP (and later RADIUS server)
+3. RADIUS between STA and RADIUS server
+4. 4-way handshake starts to generate the PTK
+
+[[./img/eapcontext.jpg]]

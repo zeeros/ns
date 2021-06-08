@@ -1,0 +1,48 @@
+#+TITLE: DNS
+
+*Domain Name Service* (*DNS*) is a hierarchical and decentralized naming systems that translates human-readable domain names to IP addresses. DNS primarly uses UDP on port 53 to serve requests.
+- Queries and replies use a 16 bits ID (originally incremental query ID).
+- The protocol doesn't deal with security.
+
+We will focus on two types of records: *A*, that stores IP addresses =[domain.name] A [ip-address]=, and *NS*, that stores DNS servers to query =[domain.name] NS [domain.dns.server]=.
+
+In the DNS hierarchy, DNS servers may be
+- Authoritative :: That answers to queries on a partition of domain names.
+- Recursive :: Forwards queries to authorative DNSs
+
+Name servers use caches for performance optimization, with a TTL set by the server answering the query.
+
+#+CAPTION: DNS Hierarchy and example of an iterative query.
+[[./img/dns_hierarchy.jpg]]
+
+** Cache poisoning
+
+DNS provides no real authentication and anybody can impersonate an authorative server, since the recursive name server use a 16 bits QID. An attacker may guess the QID, and deliver a *cache poisoning attack*.
+
+The QID may be guessed by either a
+- MITM attack, if the attacker is in the same LAN of the recursive NS.
+- Impersonating an authorative NS.
+
+#+CAPTION: If the attacker wins the race condition against an authoritive NS, maybe with the help of a DoS attack, the attacker can poison the recursive NS (that accepts the first answer and drops the second). Poisoning a recurrent NS has the power to redirect all the queries that will be made to it.
+[[./img/dns_poisoning.jpg]]
+
+** Kaminsky vulnerability
+
+By poisoning =NS= records instead of =A= records the attacker can control intere subdomains.
+
+[[./img/kaminsky_attack.jpg]]
+
+The vulnerability is due to the shirt size of the QID (16 bits): assuming changing the ID size to 32 bits is unfeasible, mitigation involves randomizing the source port (+16 bits, with some reserved values) to increase entropy, so any answer that doesn't match QID and the port is dropped.
+** DNS amplification attack
+
+Amplification attacks are possible when the request is much smaller than the answer. In DNS, by spoofing the source IP address, the victim can be flooded by bigger DNS answers.
+
+[[./img/dns_amplification.jpg]]
+
+** DNS zone transfer
+
+A lower ranking NS may ask to an authorative to dump copy over TCP the entire zone DB, but since DNS information are publicly available also an attacker can do it to acquire knowledge of the zone and facilitate attacks.
+
+** DNSSec
+
+The previous atatcks ar enot possible with *DNSSec*, that implements secure DNS with authentication and integrity (confidentiality is not required) checks with a public-key infrastructure.

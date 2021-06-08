@@ -1,0 +1,206 @@
+#+TITLE: Defensive technologies
+
+* System hardening
+
+Any software out-of-the-box runs on a *default configuration* whose goal is to satisfy the majority of user needs. This also means that many useless services or features are enabled and increase the *attack surface*, that is the set of resources exposed to attackers.
+
+*System hardening* goal is to tune system's configuration to improve security without losing functionalities. At a security level, the *need-to-know-principle* should be applied to
+- Systems :: Configured in a way that enables only the functionalities needed for its execution.
+- Users :: Authorized to access only the resources required for its operation. This requires the user to be identified and authenticated.
+
+* Firewalls
+
+Even after hardening, a system configuration might have a reducible attack surface. A *firewall* filters in a centralized way all incoming and outgoing traffic. Firewall policies may be *default deny* (through blacklisting) or *default permit* (through whitelisting).
+
+#+CAPTION: With no perimetral defense, the client can try to access internal servers through the service they are running, meaning that each server must check the incoming traffic. Instead, a firewall can centralize these policies.
+[[./img/fw_pd.jpg]]
+
+** Static packet filtering
+
+For each incoming IP packet, policies are applied to the header to decide if it should be forwarded. It is a stateless approach with a low demand of resources, often implemented by routers.
+
+Example of access list for packet filtering, evaluated in order. With default allow policy, we would also need the =deny= rule.
+
+| Comment                                   | Action | Src            | SPort | Dest           | Dport | Flags      |
+|-------------------------------------------+--------+----------------+-------+----------------+-------+------------|
+| Outgoing TCP traffic to remote ssh server | allow  | 192.168.2.0/24 | *     | *              | 22    | SYN or ACK |
+| And the SYN ACK                           | allow  | *              | 22    | 192.168.2.0/24 | *     | SACK       |
+| And the rest of the communication         | allow  | *              | 22    | 192.168.2.0/24 | *     | ACK        |
+| No incoming TCP connections               | deny   | *              | *     | 192.168.2.0/24 | 22    | SYN        |
+
+Policies are more difficult to define for protocols with no clear client and server (e.g. SMTP).
+
+| Comment                                       | Action | Src      | SPort | Dest     | Dport | Flags      |
+|-----------------------------------------------+--------+----------+-------+----------+-------+------------|
+| Outgoing traffic to remote SMTP server        | allow  | 10.1.1.1 |     * | SMTP-srv | 25    | SYN or ACK |
+| And the SYN ACK                               | allow  | SMTP-srv |    25 | 10.1.1.1 | *     | SACK       |
+| And the ACK                                   | allow  | SMTP-srv |    25 | 10.1.1.1 | *     | ACK        |
+| Incoming SMTP traffic from remote SMTP client | allow  | SMTP-srv |     * | *        | 25    | SYN or ACK |
+| And the SYN ACK                               | allow  | *        |    25 | SMTP-srv | *     | SACK       |
+| And the rest of the communication             | allow  | *        |    25 | SMTP-srv | *     | ACK        |
+| No other traffic allows                       | deny   | *        |     * | *        | *     | *          |
+
+** Stateful packet filtering
+
+A log of recently seen packets is kept to help filtering packets. Stateful firewalls use short-term *pseudo-states* to manage stateless protocols (e.g. UDP, use =source_ip, source_port, destination_ip, destination_port=). The fact of supporting states allows to act at application layer (e.g. FTP using a control and a data channel). Compared to static packet filtering, rules can be more fine-tuned and is heavily used on modern firewalls (paying a cost in terms of performances).
+
+Stateful rules allow the followins states
+- NEW :: Packet tries to open a new connection.
+- =ESTABLISHED= :: Packet related to an existing connection.
+- RELATED :: Packet tries to open a new connection related to an existing one (e.g. FTP).
+- INVALID :: None of the above.
+
+For example, we might prevent ACK scans with a stateful rule as follows
+#+BEGIN_CODE sh
+iptables -A INPUT -i eth0 -m state -state INVALID -j DROP
+#+END_CODE
+- =-A INPUT= to add a rule for incoming packets
+- =-i eth0= to select the interface
+- =-m state= to set that  the rule should match the state field
+- =-state INVALID -j DROP=, so if the state is invalid then drop the packet
+
+A stateless rule to prevent ACK scans is shown below. The downside here is that ven legitimate =ACK= are dropped.
+#+BEGIN_QUOTE
+iptables -A INPUT -i eth0 -p tcp
+#+END_QUOTE
+- =-p tcp= to set the protocol to TCP
+- =--tcp-flags ACK -j DROP=, so if the flag is =ACK= then drop it
+
+We can allow incoming traffic for existing connections
+#+BEGIN_CODE sh
+iptables -A INPUT -i eth0 -m state -state ESTABLISHED,RELATED -j ACCEPT
+# or mixed rules
+# accept all packets that are not from eth1
+iptables -A INPUT -i ! eth1 -j ACCEPT
+# accept all packets form an existing connection
+iptables -A INPUT -m state -state ESTABLISHED,RELATED -j ACCEPT
+# drop as a default policy
+iptables -P INPUT DROP
+#+END_CODE
+** Proxy
+
+In general, a *proxy* is a mediator component that untangles between client and server.
+- Open proxy :: Client can make his IP address secret to the server.
+- Reverse proxy :: Hides informations about the internal network and can add firewalling, load balancing, caching capabilities.
+- Application level proxy :: Proxying at application level.
+
+[[./img/proxy.jpg]]
+
+** Hosting and topologies
+
+Depending on its function, a firewall may be
+- On routers or LAN switches to deliver packet filtering.
+- On *bastion hosts*, that are machines with strong secuirty who can host application layer proxying.
+- A *host-based* instance implemented by a software module in a host.
+- A *personal* firewall that controls traffic of a workstation with a software module.
+
+Topologies can include
+- Host-resident firewall :: Personal firewall or firewall software on a server.
+- Screening router :: Single router between internal and external networks, with stateless or stateful packet filtering. Good for small offices and home offices.
+- Single bastion inline :: Add to the previous configuration a bastion that grants application level filtering.
+- Single bastion T :: Add to the previous a DMZ for servers exposed to the public.
+- Double bastion T :: One bastion for the DMZ, one for the internal network.
+
+#+CAPTION: A good firewall setup requires networks to be logically segmented. Here a simple implementation vs cascade firewalling, parallel firewalling is also possible to prevent chain dependencies. A mixture solution might be ideal.
+[[./img/topology_seg.jpg]]
+* Intrusion detection systems
+
+An *intrusion* in a network system is a set of actions that try to compromise the CIA triad, and an *intrusion detection system* is a device or software application that monitors a network or systems for malicious activity or policy violations.
+
+Such system can monitor either a single host (host-based IDS) or network traffic (network-based IDS). Any IDS is composed by sensors, analyzers and a UI.
+
+#+CAPTION: After auditing, cleaning, formatting collected data, the detection engine uses it to collect evidence and raise alarms. Such alarms are evaluated by a decision engine.
+[[./img/ids_components.jpg]]
+
+- Requirements :: An IDS needs to be continuosly running, have reasonable overhead, be adaptive and scalable.
+- Evaluation :: Metrics such as accuracy (% succesfull detection), performance (processing rate), fault tolerance, timeliness (time windows between intrusion and detection).
+- Modeling :: After extracting features from data, analysis is conducted by
+  - Misuse detection (signature-based) :: Very diffused detection technique, uses a blacklist of patterns related to malicious activities. Signature detection is used to identify predefined patterns.
+  - Anomaly detection :: Assumption is that intruder behaviour differs from normal behaviour, but building a legitimate profile is quite difficult.
+  - Specification-based detection :: Manually developed specification of the system behaviour. In practice, the development of such a model is non-trivial for complex scenarios (but useful in more predictable cases).
+
+When valuating IDS, be careful of the *base-rate* fallacy. Remeber the Bayesian theorem
+
+\begin{equation}
+P(A|B)=\frac{P(A) \cdot P(B|A)}{\sum^{n}_{i=1} P(A_i) \cdot P(B|A_i)} \notag
+\end{equation}
+
+By ignoring the base rate (actual traffic is overwhelmingly benign) and focusing on the TP and TN percentage, non-legitimate traffic is overvalued with respect to FP and FN.
+
+An IDS may be
+- Host-based :: Use OS auditing, monitor and analysis to find malwares. Effective on single host, but misses the big picture of the host being in a network.
+- Distributed host-based :: Sensors are distributed through hosts and the data is collected by a manager.
+- Network-based :: Traffic is captured at specific points of the network by passive or inline sensors.
+And with respect to the firewall, an IDS can be
+- External :: Can't really detect attacks, more useful for forensic and increase knowledge.
+- Internal :: Higher chances to identify serious attacks.
+
+While key-loggers and dictionary attacks may be detected by an host-based IDS,
+
+| Attack                          | Host-based detection | Network-based detection |
+|---------------------------------+----------------------+-------------------------|
+| Key-loggers, dictionary attacks | V                    | X                       |
+| ARP poisoning, port scanning    | X                    | V                       |
+
+*Snort* is a free open source network intrusion detection system (IDS) and intrusion prevention system (IPS). In SNORT rules are expressed in single lines to match signatures in the payload.
+
+Network IDS can be obstaculated by payload encryption, signature-based evasion, IP fragmentation. Specific techniques are
+- Reassembly timeout :: Attacker, after some trials, discovers that NIDS and client have a different timeout and exploits the time window between the two.
+- Time-to-live :: If a router stays between the NIDS and the client, the router may drop packets analyzed by the NIDS.
+- Fragment replacement :: Depending on the OSs, fragments may be repleced or not with the new ones. The attacker can leverage this inconstitent replacement behaviour between client and NIDS.
+
+** Security Information and Event Management
+
+In the real worls *Security Information and Event Management* (*SIEM*) systems are usually deployed to control the whole flow through
+- Security Event Management (SEM) :: Data collecting, monitoring and log management.
+- Security Information Managemt (SIM) :: Alert, report, high level monitoring through a dashboard.
+The SIEM workflow includes
+- Data collection from logs :: Data is aggregated in a single collection point and normalized.
+- Correlation :: The IDS uses different techniques to correlate events.
+- Alerting :: Evaluate results through a CVSS to rise alerts on security incidents. Usually, in this step external Security Administration Centers (SOCs) are notified and involved to manage alerting.
+- Reporting :: Visualize information in an effective way and provide reporting.
+- Archvie logs :: Log is stored for future forensic.
+
+* Honeypot
+
+A *honeypot* is a, physical or virtual, computer security mechanism set to prevent (ineffective), detect, deflect, or counteract attempts at unauthorized use of information systems. While the honeypot is simply ignored by the benign hosts in the network, it might be contacted by an attacker (or a misconfigured host).
+
+#+CAPTION: The honeypot might be placed in different locations depending on what information we are looking for.
+[[./img/honeypot_deploy.jpg]]
+* Attacks throught the Web
+
+The attacker acts in an adversial setting against security research and firms, but also other fellow attackers. Different strategies may be employed by the attacker to find an economical equilibrium point, targeting either a
+- High propagation rate :: Internet worms act as self-propagating and self-contained malwares are allowing to provide fast propagation to reach more targets. However, more samples means higher detection rate.
+- Low propagation rate :: A stealth approach with a low number of infections.
+
+Today the self-propagation mechanism approach, being difficult to predict its propagation, is abandoned in favor of request-reply mechanisms: existing services on the web are leveraged to distribute the malware (mebroot). Infection is delivered by combining different vectors, mechanisms include
+- Service infection :: Attacking services and servers is becoming more difficult.
+- Client infection :: Clients are not as protected as servers and can be redirected to an infection point.
+
+The main vector for client infection are web browsers, with three main browser sharing most of the market and browser plugins increasing the vector attack.
+
+With domain compromisation through *Cross-site scripting* (*XSS*) attackers to inject client-side scripts into web pages viewed by other users, leveriging the mutual trusts between browser and server. Content can be compromised through
+- Persistent XSS :: The attacker manages to compromise the server and inject its conent on any user retrieving the infected resourse.
+- Content compromisation :: Can be delivered through unsanitized content (e.g. via JS).
+- Thrid-party content :: The same-origin policy prevents frames to access content of other frames. However, by trusting a a web page a trust chain goes through all the frames loaded by the page. A drive-by download attack includes unintentional downloads of any files or bundled software onto a computer device.
+
+An *exploit kit* is a collection of exploits with is a simple one-in-all tool for managing a variety of exploits altogether, reacheable from any of the previous mechanisms. Since highly accessed web sites are usually well protected, usually this attacks are delivered from the attacker's site and maladvertised (advertised like any other normal site). The attack may buy traffic such as
+- Skimmed traffic :: User clicks on some content and the attacker website is opened instead.
+- Popunder traffic :: User clicks on some content and a new tab is opened with the attacker page.
+
+* Advanced DoS attacks
+
+#+CAPTION: A botnet can be used to deliver a DDoS attack. While the victim can't use a blacklist, the size of the attack is limited by the number of bots.
+[[./img/botnet_ddos.jpg]]
+
+#+CAPTION: With the use of reflectors the attack can be delivered by any server that is open to receive a connection request by spoofing the IP(v4) of the victim a source.
+[[./img/reflected_ddos.jpg]]
+
+#+CAPTION: A DNS amplification attack can be used to overwhelm the victim, any other protocol with big ratio between size of request and response (e.g. NTP command monlist).
+[[./img/amplification_attack.jpg]]
+
+Mitigatign DDoS attacks is challenging
+- Source identification :: Identifying the source of the attack and cutting it off is a problem with IP spoofing and reflectors.
+- Capabilities :: The connection initiator must ask (and receive a grant) to connect to the receiver, who decides depending on the capability (chain of unique hash set by the routers). Routers check validity of the capability, and drop if invalid. While this prevents spoofing, however a Denial of Capability attack may be performed on the channel (that is only 5% of the downstram bandwidth).
+
+The *Coremelt attack* doesn't target hosts, but links: pair of hosts send traffic in away that targets always the same link.

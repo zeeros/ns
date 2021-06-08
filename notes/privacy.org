@@ -1,0 +1,18 @@
+#+TITLE: Privacy in networks
+
+Since HTTP is a stateless protocol, web servers use browser *cookies* to add stateful features. Many attributes can be set (e.g. name, content, host, path, send for, expires) to specify temporary (expires=NULL), persistent (expires=Wed, 20-Dec-2021), secure (set over SSL,TLS).
+
+With the *Same Origin Policy* (*SOP*) a web browser permits scripts contained in a first web page to access data in a second web page, but only if both web pages have the same origin (URI, host name, port number).
+
+The *third party cookies* are set by domains different from the main website.
+
+#+CAPTION: T1 knows all the domains, and their sequence, that are profiling the user.
+[[./img/cookie_attack_hbc.jpg]]
+
+*Supercookies* are the ones that can set at first-level domain names (e.g. .com, .it), used for example by network providers.
+
+*Plugins* are third-part applications that are attached to the browser.
+
+Even without cookies, web browsers can be *fingerprinted*.
+
+A *VPN service* hides traffic to third parties. If a VPN server can't be trust (or is blocked by ISP), *onion routing* can be used: put multiple encryption layers around the protocol. The most famous application of onion routing is provided by *Tor*.

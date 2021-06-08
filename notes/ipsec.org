@@ -1,0 +1,73 @@
+#+TITLE: IPsec
+
+* IP security concerns and requirements
+
+Since IPv4 was designed with no security concerns, the protocol is affected by
+- Lack of confidentiality, allowing credentials theft (e.g. HTTP passwords sent in clear)
+- Lack of source authentication, an open door for spoofing and DoS attacks
+- Source routing, allowing spoofign and packet redirection
+
+A protocol designed to secure IP should implement at
+- Application level :: Transparency to applications and users above transport layer, that can use either IP or IPSec
+- Host level :: Securing end points.
+- Router level :: Only authorized routers should advertise nodes, while the processing of the packet should be at source and destination to prevent payload exposure.
+
+* IPSec basics
+
+*IPsec* is a secure network protocol suite over IP, providing connectionless data integrity, data origin authentication, rejection of replayed packets, confidentiality (through encryption) and limitations to traffic analysis capabilities.
+
+The protocol suite can operate in
+- Transport mode :: With IPsec-aware hosts and end points, providing upper-layer security.
+- Tunnel mode :: With unaware hosts and applied by intermediate gateways.
+
+[[./img/ipsec_transport_tunnel.jpg]]
+
+** AH protocol
+
+*Authentication header* (*AH*) provides authentication and integrity, with
+- Stateful tunneling using sequence numbers.
+- Authentication of the whole payload and most of the header, including the source IP address (preventing spoofing) and AH sequence number.
+- Different possible cryptographic settings.
+
+[[./img/ah_transport_tunnel.jpg]]
+
+** ESP protocol
+
+*Encapsulation security protocol* (*ESP*) can provide
+- Confidentiality :: Of payload, not the sequence number.
+- Authentication :: Of payload, no header fields.
+
+[[./img/esp_transport_tunnel.jpg]]
+
+For encapsulation and encryption, IPSec adopts an *Encrypt-then-MAC* method
+- Encrypt-then-MAC (IPsec) :: Given a message $M$, encrypt it as $C=Enc(M,K_E)$ with key $K_E$ and compute the $MAC(C,K_I)$.
+- Encrypt-and-MAC (SSH) :: Given a message $M$, encrypt it as $C=Enc(M,K_E)$ with key $K_E$ and compute the $MAC(M,K_I)$.
+- MAC-then-Encrypt (SSL) :: Given a message $M$, compute its $MAC(M,K_I)$ with key $K_I$ and encrypt $M+MAC$ with key $K_E$.
+** Keys management
+
+With *security association* (*SA*) two parties share security attributes (e.g. algorithms, keys) to setup a secure channel. IPSec provides a range of options (ESP/AH, Tunnel/Transport, sender, receiver, protocol, port) for the SA, each combination requiring a different key. The management of these keys may be
+- Manual :: Only suitable for small networks or testing purposes.
+- IKE :: Internet Key Exchange, affected by bad documentation and lack of devices support.
+- IKEv2 :: Current version of IKE, addressing previous problems.
+
+IPSec relies on *Authenticated DS*. *Diffie-Hellman* (*DH*) is a widely used public-key algorithm for key exchange that relies on discrete logarithm problem to prevent eavesdropping.
+
+To decided which protection a packet should have in a traffic stream, each IPsec nodes uses
+- Security Parameter Index (SPI) :: Tag that identifies a SA.
+- Security Policies DB (SPD) :: Stores IPSec policies that deﬁne which traffic to be protected, how it is to be protected, and with whom to protect it. The policy is defined by selectors such as source and destination IP Addresses/ports and protocols.
+- Security Association DB :: Stores SAs indexing them by SPI, source/destination addresses and protocol (e.g AH, ESP).
+
+For example, having two hosts =A=, =B= connected via IPsec in Transport mode and two intermediate gateways =C=, =D= connected via Tunnel mode (=A= goes through =C=, =B= goes through =D=), we might the following entries
+
+| Entry  | From | To  | Protocol | Port | Policy       | SPI | SA Record    | Tunnel destination |
+|--------+------+-----+----------+------+--------------+-----+--------------+--------------------|
+| A SPD  | A    | B   | Any      | Any  | AH[HMCA-MD5] |     |              |                    |
+| A SADB | A    | B   | AH       |      |              |  12 | HMAC-MD5 key |                    |
+| C SPD  | Any  | Any | Any      | Any  | ESP[3DES]    |     |              | D                  |
+| C SADB | Any  | Any | ESP      |      |              |  14 | 3DES key     |                    |
+
+Some recurrent configurations for SAs are the following
+- End-to-end IPsec in Transport mode between IPsec-aware hosts with some SAs.
+- Gateway-to-gateway IPsec in Tunnel mode between gateways (used for VPNs).
+- Combination of the previous two, Trasnport mode encapsulated in Tunnel mode.
+- Remote host support, with IPsec tunnel from client a security gateway and SAs from gateway to server.

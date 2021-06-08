@@ -14,10 +14,10 @@ Additional properties may be also be preserved
 - Non-repudiation :: Actions on the information can't be refused by its author
 - Authentication :: Of user, messages, etc.
 
-Computer security rieles on *TCBs* (trusted computing bases) built with trusted parts
-- Trusted parts include hardware, firmware and software
+Any computer security rieles on *TCBs* (trusted computing bases) built with trusted parts
+- Trusted parts always include hardware, firmware and software
 - If a trusted component is breached, the security properties of the entire system may be compromised
-- Minimizing the size of the TCB is key to deal with security and costs
+- Minimizing the size of the TCB is key to deal with security
 
 * TODO "Reflection on Trusting Trust" by Ken Thompson [fn:1] [fn:2]
 * Network security
@@ -32,33 +32,6 @@ However, network securities adds even more challenges
 - Etherogeneous protocols and technologies :: A wide range of protocols and technologies is adopted in networking (and computing in general). However, the joint points of this different architectures often hide *vulnerabilties*.
 - Legacy issues :: The adoption of new versions of protocols is often slow, exposing many hosts to risk and lowering the security level
 (e.g. IPv6 and IPv4)
-
-* Attack and attacker model
-
-The *attack and attacker model* describes the capabilities, assumptions, reasons of an attacker to deliver an attack. Any security mechanism is guaranteed to preserve a set of security properties only when applied to the same attack model.
-
-In the network context, an attacker might deliver an
-- Outsider attack :: By infiltrating the communication channel in between hops the attacker can impersonate a client, modify connections an routing tables, etc.
-- Insider attack :: By legally accessing the system to act maliciously
-
-The continuous increase of attack points in the current systems affects all the security stages
-- Prevention :: The easiest of all steps to deal with has experienced considerable improvements. Still, it is not bullet-proof and failures will always affect this stage.
-- Detection :: Especially critical, but the current complexity of systems prevents any security expert to assure that a system is completely secure.
-- Mitigation :: Is experiencing important step-forwards, but still requires a lot of manual effort and its cost is high.
-
-** Dolev-Yao model (or outright malicious attacker)
-
-The attacker is *omnipotent*: he can overhear, intercept and synthesize any message over the network to compromise CIA properties and its only contraint is the use of cryptographic methods. The attacker acts as a *man-in-the-middle*.
-
-While implementing this model may be possible in smaller networks, it might be quite difficult in big ones
-- In a packet switching network, the attacker needs to be aware of the physical path the packet takes and its intermediary hops.
-- In fact, this type of attack is usually delivered near the end points of the communication. For example, the *man-in-the-browser* attack is delviered the closest to the client.
-
-** Honest-but curious attacker (HBC)
-
-The honest-but-curious attacker is a legitimate participant in a communication protocol who will not deviate from the defined protocol but will attempt to learn all possible information from legitimately received messages. This is the most used attacker model used in the context of security.
-
-The attacker tipically resides at the service level and profiles the client, potentially compromising both confidentiality and integrity.
 
 * Footnotes
 
