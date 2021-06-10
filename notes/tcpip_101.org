@@ -1,55 +1,33 @@
 #+TITLE: TCP/IP protocol 101
 
-* Autonomous Systems
+* Internet and the OSI model
 
-The internet is made of *Autonomous Systems* (*ASs*), where each AS is a logically separated network that manages
-- Internal routing :: Using an *Interior Gateway Protocol (*IGP*), like RIP or OSPF
-- External routing :: Using an *Exterior Gateway Protocol (*EGP*), mainly BGP
+The internet is a global network interconnecting logically separated networks known as *Autonomous Systems* (*ASs*). Each AS manages communication through an
+- Interior Gateway Protocol (IGP) :: Such as RIP or OSPF
+- Exterior Gateway Protocol (EGP) :: Mainly BGP
 
-* OSI model
-
+The OSI model define a standard stack of communication protocols
 - Layer 1 :: Physical layer (e.g. ethernet cable, optical fiber) uses *bits* as logic unit.
-- Layer 2 :: Data link (e.g. ethernet, PPP) uses *data frames* as logic unit.
+- Layer 2 :: Data link layer (e.g. ethernet, PPP) uses *data frames* as logic unit.
 - Layer 3 :: Network layer (e.g. IPv4, IPv6) uses *packets* as logic unit.
-- Layer 4 :: Transport layer provides reliability, uses *segments* with connection protocols (e.g. TCP) and *datagrams* with connectionless protocols (e.g UDP).
-- Layer 5 :: Session layer provides security (e.g. TLS, SSL) using *sessions*
-- Layer 6 :: Presentation layer often not implemented and mixed with the application layer
-- Layer 7 :: Application layer (e.g. HTTP, Telnet, DNS)
+- Layer 4 :: Transport layer provides reliability, uses *segments* as logic unit with connection protocols (e.g. TCP) and *datagrams* with connectionless protocols (e.g UDP).
+- Layer 5 :: Session layer provides security (e.g. TLS, SSL) using *sessions*.
+- Layer 6 :: Presentation layer is rarely implemented and usually mixed with the application layer.
+- Layer 7 :: Application layer (e.g. HTTP, Telnet, DNS).
 
-** Data link layer
+* Data link layer
 
-The lowest logical layer interconnects physical interfaces. Each interface has a *MAC* address
-- A 48-bit identifier (=HH-HH-HH-HH-HH-HH=) used for local network routing.
-- First 24 bits identify the manufacturer, who can assign the last 24 bits.
-- It is uniquely assigned by the manifacturer, according to IEEE 802, but in reality it is possible to change it.
+The lowest logical layer interconnects physical interfaces, that are uniquely identified by a *MAC* address in a LAN. The MAC address is a 48-bit identifier (=HH-HH-HH-HH-HH-HH= in HEX notation), with the first 24 bits identifing the manufacturer (who assigns the last 24 bits). While the address should be uniquely assigned by the manifacturer, it can be easily changed by the user and shouldn't be used as security mechanism.
 
-Consider the LAN below: the frame is sent over ethernet on a broadcast and shared channel, the receiver is the only host that doesn't drop the frame.
-
+#+CAPTION: Frames are sent over ethernet on a broadcast and shared channel, the receiver is the only host that doesn't drop the frame.
 [[./img/frame_example.jpg]]
 
-** Network layer
+* Network layer
+** ARP, poisoning and MITM attack
 
-The lowest layer with the concept of routing. With *IP* we have
-- Packets containing information on how to reach destination
-- A connectionless (stateless) protocol, no handshake to establish a connection
-- Addresses that are usually dynamically assigned, either *IPv4* (32-bit, most common) or *IPv6* (128-bit, early adoption)
-
-Commuincation between local networks uses IP routing: consider a client, =192.168.1.2= ,in AS1 that wants to send a message to a server, =10.11.14.3=, in AS2.
-1. The client asks to the local gateway, =192.168.1.1=, who recognizes that the destination address is not part of the IP range of the current AS.
-2. The local gateway asks to the border router, =192.67.65.2=, who in this case has an entry in its routing table for the border router in the destination AS.
-
-[[./img/routing_example.jpg]]
-
-*** ARP protocol and poisoning
-
-The *Address Resolution Protocol* (*ARP*) is used to map an IP address to a MAC address.
-
-Consider an host =A= (=192.169.0.1=, =e0:f8:47:1a:4e:d6=) with the following ARP table
-- =192.169.0.15=, =00:10:BC:19:3d:5d= for host =B=
-- =192.169.0.17=, =e0:10:BC:4e:12:62= for host =C=
-How can =A= discover host =D= (=192.169.0.16=, =00:10:BC:2c:11:56=)? Two mechanisms may be used for discovery
-- ARP request-reply :: =A= asks for the MAC address of =D=, =D= answers
-- Gratuitous ARP :: =D= announces itself when joining a local network
+The *Address Resolution Protocol* (*ARP*) is a declarative protocol used to discover MAC addresses associated with IP addresses. With ARP each hosts manages a cache table and can operate in two modes
+- ARP request-response :: Hosts send a broadcast message request to ask for the MAC address of a given IP address.
+- Gratuitous ARP (GARP) :: Hosts send a broadcast, gratuitous message response when joining a LAN.
 
 #+CAPTION: Wireshark capturing an ARP request-reply
 [[./img/ARP_rr_example.jpg]]
@@ -57,45 +35,54 @@ How can =A= discover host =D= (=192.169.0.16=, =00:10:BC:2c:11:56=)? Two mechani
 #+CAPTION: Wireshark capturing a broadcast request
 [[./img/ARP_broadcast_example.jpg]]
 
-The protocol relies on tables and caching of these mappings and heavily relies on the assumption that nobody misbehaves, since the information received by each parts is believed to be truthful. In fact ARP is a *declarative protocol*, where no authentication is required to the nodes.
+Since ARP provides no authentication method, an attacker can continuously sends gratuitous ARP responses to poison the target ARP table and deliver a MITM attack. While the protocol works only in the confinement of the same network, such attack can be used in support of other techniques (e.g. DNS spoofing).
 
-A communication between two hosts can be easily attacked by a third host delivering a man-in-the-middle attack by poisoning the ARP tables of the two hosts. This attack can be delivered only inside the same local network where the MAC address is meaningful, but still it can be used as a first step to serious attacks (e.g. targeting a DNS).
+Mitigation can rely on
+- Static ARP :: Set permanent entries on ARP cache (unsuitable for large and dynamic networks).
+- Detection tools :: ARP poisoning is a very loud attack that can be detected by Intrusion Detection Systems.
+- Packet filtering :: Disable gratuitous ARP replies, filter and inspect packets.
+- Cryptography-based authentication :: Accept only authenticated ARP replies through cryptographic means (limited compatibility).
 
-One mitigation mechanism can be allowing only one, trusted host to update the ARP tables.
+** IP and ICMP
 
-*** IP addresses and subnets
+*Internet Protocol* (*IP*) is a connectionless protocol for delivering packets from source to destination host, solely based on the IP addresses specified in the packet header. IP addresses are 32-bit (for IPv4) or 128-bit (for IPv6) identifiers dynamically (or statically) assigned.
 
-A 32-bit IP address is logically divided into *subnets*, and this is done by reserving some bits to the network, some to the subnet and the lasts for the host.
+A *subnet* is a logical division of an IP network: given an IP address, the most-significant bit-group is the routing prefix (the rest is the host identifier). The routing prefix can be expressed with two notations
+- Classless Inter-Domain Routing (CIDR) :: e.g. =192.168.10.1/24= sets 24 bits for the routing prefix, 8 for the hosts.
+- Subnet mask :: e.g. =255.255.255.0= is the subnet mask for =192.168.10.1/24=.
 
-A subnet mask sets the section meant for network and subnet, for example
-- 255.255.255.0 :: 24 bits for the network and subnet, 8 for the host
-- 192.168.10.1/24 :: CIDR, equivalent to =192.1.68.10.1/255.255.255.0=
+IPv4 addresses are divided in classes
+- For standard communication
+  - A :: =0.0.0.0/8-127.255.255.255/8=
+  - B :: =128.0.0.0/16-191.255.255.255/16=
+  - C :: =192.0.0.0/24-223.255.255.255/24=
+- D :: =224.0.0.0-239.255.255.255=, used for multicast
+- E :: =240.0.0.0-254.255.255.254=, experimental
 
-The IP classes are
-- A :: =0.0.0.0/8-127.255.255.255/8= (for standard communication)
-- B :: =128.0.0.0/16-191.255.255.255/16= (for standard communication)
-- C :: =192.0.0.0/24-223.255.255.255/24= (for standard communication)
-- D :: =224.0.0.0-239.255.255.255= (multicast)
-- E :: =240.0.0.0-254.255.255.254= (experimental)
+Reserved private IPv4 network ranges are =10.0.0.0-10.255.255.255=, =172.16.0.0-172.31.255.255= and =192.168.0.0-192.168.255.255=.
 
-The following are reserved for private networks and shouldn't be forwarded to the internet
-- =10.0.0.0-10.255.255.255=
-- =192.168.0.0-192.168.255.255=
-- =172.16.0.0-172.31.255.255=
+The control plane for IP is in the hands of *Internet Control Message Protocol* (*ICMP*). Some ICMP message types include type 3 (Unreachable message), type 11 (time exceeded message), type 8 and 0 (Echo message and reply).
 
-*** IP fragmentation and DoS
+[[./img/icmp_header.jpg]]
 
-Fragmentation is common to all communication protocols: by having a maximum packet size, the receiver is able to allocate a buffer of memory and store a copy of incoming packets. Consider the following fields of an IPv4 header
-- IHL :: Internet Header Length, 4 bits to specify the number of 32-bit words in the header whose value may range between 5 and 15.
-- MTU :: Maximum Transmission Unit, up to 1,500 bytes that sets the limit for packet fragmentation.
-- Options :: Unused field, reserved to guarantee some flexibility to the protocol. However, it is also an entry point for malitious actions: an attacker might exploit it to establish a *covert channel*.
+The *traceroute* command relies on ICMP to display possible routes (paths) and measuring transit delays of packets across the network
+- Sender starts by sending an ICMP echo to the destination with TTL=0.
+- The first hop replies, and the sender takes note of its IP. If the reply is an unreachable message, the sender sends another ICMP echo with an increased TTL.
+- The discovery ends when an echo reply is received.
 
-Important fields for the fragmentation part are
-- Identification :: 16 bits, helps to identify all the fragments of the same datagram
-- Flags :: 3 bits, in the form =0+DF+MF=
-  - DF :: If 1, don't allow fragmentation
-  - MF :: If 1, more fragments are expected
-- Offest :: 13 bits, with respect to the first datagram with the same ID
+** Fragmentation
+
+The IPv4 header is variable in size due to the Options field: the IHL field contains the size of the IPv4 header, it has 4 bits that specify the number of 32-bit words in the header. It can range between 5 (5 × 32 bits = 160 bits = 20 bytes) and 15 words (15 × 32 bits = 480 bits = 60 bytes). The Options field guarantees some flexibility to the protocol, but also an entry point for an attacker to establish a covert channel.
+
+#+CAPTION: IPv4 header
+[[./img/ipv4_header.jpg]]
+
+IP fragmentation breaks packets into fragments, so that the resulting pieces can pass through a link with a smaller Maximum Transmission Unit (MTU) than the original packet size. The fragments are reassembled by the receiving host.
+
+Fields used for fragmentation are
+- Identification :: 16 bits, identifies the group of fragments of a single IP datagram.
+- Flags :: 3 bits, from most to least significant: bit 0 (reserved, must be zero), bit 1 (Don't Fragment, DF), bit 2 (More Fragments, MF).
+- Fragment offset :: 13 bits, specifies the offset of a particular fragment relative to the beginning of the original unfragmented IP datagram in units of eight-byte blocks. The first fragment has an offset of zero. The 13 bit field allows a maximum offset of (213 – 1) × 8 = 65,528 bytes, which, with the header length included (65,528 + 20 = 65,548 bytes), supports fragmentation of packets exceeding the maximum IP length of 65,535 bytes.
 
 Consider the following fragmentation example: we have 4,200 bytes of data to send over IP on an ethernet channel whose MTU is 1,500 bytes. With IPv4 fragmentation we have
 
@@ -108,78 +95,66 @@ Consider the following fragmentation example: we have 4,200 bytes of data to sen
 | MF Flag         |          1 |          1 |          0 |
 | Offset          |          0 |       1480 |       2960 |
 
-A possible attack that exploits IP fragmentation is a DoS
-- The sender sends a series of packets with the same ID but none of them with offset 0
-- If no timeout is set, the intermediate router waits indefinitely for the first packet
+#+CAPTION: If an intermediate router has no timeout on fragment reassembly, a simple DoS attack can be mounted by a client sending a series of fragments for a packet,  none of them having zero offset.
+[[./img/fragment_timeout.jpg]]
 
-*** ICMP and Ping DoS
+** DoS attacks
 
-The *Internet Control Message Protocol* (*ICMP*) covers the control plane for IP. Examples of message types are Type 3 (unreachable message), Type 11 (time exceeded message), Type 8 and 0 (echo message and reply).
-
-*Traceroute* uses in fact ICMP
-- Sender starts by sending an ICMP echo to the destination with TTL=0
-- The first hop replies, and the sender takes note of its IP. If the reply is an unreachable message, the sender sends another ICMP echo with an increased TTL
-- The discovery ends when an echo reply is received
-
-ICMP can be used to deliver DoS attacks, some attack templates are
+The ICMP protocol can be used to deliver several type of DoS attacks
 - Ping flood :: The attacker leverages its superior bandwidth to overwhelm the receiver with ICMP echo requests.
-- Ping of death :: A well-formed ping packet (header and data) is 64 bytes in size, but any IPv4 packet may be as large as 65,535 ($2^{16}-1$) bytes. The sender can rely on IP fragmentation to send a packet that exceeds the MTU limit, the receiver might end up with a memory overflow and crash.
+- Ping of death :: A well-formed ping packet (header and data) is 64 bytes in size, but any IPv4 packet may be as large as 65,535 ($2^{16}-1$) bytes. The attacker can violate the protocol and exceed the MTU limit to cause a memory overlow and/or crash on the receiver side.
 
-** Transport layer
-*** TCP and SYN Dos
+* Transport layer
+** TCP and SYN Dos
 
-*Transmission Control Protocol* (*TCP*) builds, over IP, a stateful channel to exchange data segments in a reliable, ordered, and error-checked way. A TCP connection is
-- Uniquely identified by source and destination addresses (IP) and their port (TCP), all stored in the header.
-- Some destination ports are reserved (<1024, SSH:22, HTTP:80, HTTP:443, FTP:21), the source port is randomly assigned.
+*Transmission Control Protocol* (*TCP*) builds, over IP, a stateful channel to exchange data segments in a reliable, ordered, and error-checked way. A TCP connection is uniquely identified by source and destination addresses (IP) and their port (TCP), all stored in the header. Some destination ports are reserved (<1024, SSH:22, HTTP:80, HTTP:443, FTP:21), while the source port is randomly assigned.
 
-Some other header fields include
-- SYN :: Set at 1 on the first packet (and no =ACK=) to initialize a TCP session, answered with =SYN;ACK=
-- ACK :: Robusteness is guaranteed with acknowledgment
-- FIN :: Set at 1 to close the connection
-- RST :: Set at 1 to drop the connection, no answer is expected after this. Also used to reply to incoming packets with
-  - No =RST= flag that and part of a closed connection
-  - Only =ACK=
-  - An unsolicited =SYN;ACK=
-- Sequence number :: 32-bit identifier incremented each time a packet is sent
-- ACK number :: 32-bit identifier set to the =SEQN= of the last packet plus one
+#+CAPTION: The TCP header
+[[./img/tcp_header.jpg]]
+
+Code bits contains a set flags, among them
+- SYN :: Only the first packet sent from each end should have this flag set.
+- ACK :: All packets after the initial SYN packet sent by the client should have this flag set.
+- FIN :: Last packet from sender
+- RST :: Reset connection.
+- Sequence number :: Has a dual role
+  - SYN = 1 :: Initial sequence number, the sequence number of the actual first data byte and the acknowledged number in the corresponding ACK are then this sequence number plus 1.
+  - SYN = 0 :: Accumulated sequence number of the first data byte of this segment for the current session.
+- ACK number :: If the ACK flag is set then the value of this field is the next sequence number that the sender of the ACK is expecting. This acknowledges receipt of all prior bytes (if any). The first ACK sent by each end acknowledges the other end's initial sequence number itself, but no data.
 
 #+CAPTION: TCP 3-way start (SYN) vs 4-way ending (FIN) handshake. Note that in 4-way the last client may abruptly close the connection without sending the last ACK, otherwise he waits for a time window to send the final ACK.
 [[./img/TCP3+4hs.jpg]]
 
-In states =SYN_RCVD= (server) and =ESTABLISHED= (client) both part establish a *Transmission Control Block* (*TCB*), that is a special data structure that stores information about the connection dismissed as soon as the connection ends.
+In states =SYN_RCVD= (server) and =ESTABLISHED= (client) both part establish a *Transmission Control Block* (*TCB*), a special data structure that stores information about the connection kept alive until the connection ends.
 
 In a naive way, a server may be overloaded by TCP requests to open a connection, however
 - The time frame where the attacker may act is limited by a timeout (usually 2 minutes)
 - It is unlikely that the attacker can rely on a higher bandwidth with respect to the server
 - The attacker's bandwidth can rapidly saturate since each message sent will get a response
 
-A more sophisticated attack may involve (with IPv4) *spoofing*: sending packets with different source addresses and make the server respond to other hosts, making the attacker act in $O(n)$ instead of $O(2n)$. This attack in theory shouldn't work, since the an unsolicited =SYN;ACK= should be answered just with a reset that terminates the connection by the impersonated machine. However, the impersonated machines may in fact not respond at all (e.g. firewall dropping packets) and breaking the collaborative nature of IP.
+A more sophisticated attack may involve (with IPv4) *spoofing*: sending packets with different source addresses and make the server respond to other hosts, making the attacker act in $O(n)$ instead of $O(2n)$. This attack in theory shouldn't work, since the an unsolicited =SYN;ACK= should be answered just with a reset that terminates the connection by the impersonated machine. However, the impersonated machines may in fact not respond at all (e.g. firewall dropping packets) and break the collaborative nature of IP.
 
 Today the only possible defense are mitigation strategies such as *load balancing*, *rate limiter*, *proof of work*. A proof of work strategy tries to brake the asymmetry between sender, who has usually far easier job, and receiver by artificially augmenting the workload of the sender (the strategy shouldn't affect honest players).
 
 In general, when a DoS is detected and mitigation measures are taken, the defense comes to late: ISPs are in a position to take preventive measures, but there is no economic benefit for them to do so since traffic generates revenues.
 
-*** TCP session hijacking and Mitnick attack
+** TCP session hijacking and Mitnick attack
 
-Suppose a server implements an IP-based authentication (not recommended in general), accepting incoming TCP connections only from a white list of hosts. How can an host not in the list reach the server?
+Given a server authorizing a whitelist of IP addresses (a bad practice), can an host not in the list reach the server?
 
-The attacker might send a =SYN= request by spoofing a legitimate host, but the response will reach the spoofed client. At this point the attacker knows the client (spoofed) and destination IP, the port (if not, scan), the client =SEQN= (generated by the client).
+If an attacker spoofs a whitelisted IP and send a =SYN= request its response will just reach the spoofed host. Pretending to be the client requires the attacker to know the client and destination IP, the port, the client =SEQN= and the server =SEQN= (the only missing information).
 
-The only information missing is the =SEQN= of the server (being sent to the spoofed host), since the attacker cannot eavesdrop it by sitting on a different network. But can the attacker predict it somehow?
-- The protocol specifies in a naive way the =SEQN= generation in an almost deterministic way, with no security concern in mind. Sequence prediction difficulty depends on the host implementation, and can be found out with =nmap=.
-- Assuming random generation of the =SEQN=, the attacker has $1/2^{32}$ chances to guess it.
+Hijacking the session requires the attacker to discover the server =SEQN=, either by
+- Guessing the =SEQN= :: In the worst cast the attacker has $1/2^{32}$ chances to guess a randomly generated =SEQN=. The sequence might be easier to guess depending on the actual host implementation (=nmap= to find out the prediction difficulty).
+- Eavesdrop :: If the attacker sits in the same network, he can sniff the server =SEQN=.
 
-The *Mitnick attack* exploits the race condition that raises between to packets reaching the server
-- The attacker's =ACK= packet sent after the first =SYN= request
-- The legitimate client's =RST= packet in response to an unsolicited connection
-If the attacker predicts the corret =ACK= and manages to reach the server before the legitimate client (e.g. with the help of a DoS attack), the connection is established.
+Having somehow guessed the server =SEQN=, the *Mitnick attack* exploits the race condition that raises between two packets reaching the server
+- The attacker's =ACK= packet sent after the first =SYN= request.
+- The legitimate client's =RST= packet in response to an unsolicited connection.
+If the attacker predicts the correct =ACK= and manages to reach the server before the legitimate client (e.g. with the help of a DoS attack), the connection is established.
 
-*** UDP
-
-*User Datagram Protocol* (*UDP*) is a stateless protocol with no delivery guarantee that provides a faster alternative with respect to TCP, used in important infrastructural service in the internet (e.g. DNS, NFS, SNMP, DHCP, real time applications). A UDP scan may reveal several services listening to UDP ports relying on ICMP, however fingerprinting is usually less accurate than TCP since firewall usually drop ICMP error messages.
-
-** Session, presentation and application layers
-*** Security protocols 101
+* Session, presentation and application layers
+** Security protocols 101
 
 Let's assume we have to design a car key system, where $CK$ is the car key and $\{m\}_K$ stands for "$m$ encrypted with $K$". Few implementations are possible, each with its drawbacks
 1. Car and key share the same identifier $IDnr$, the car is opened when the key is in proximity.
@@ -195,7 +170,7 @@ Finally, car and key may use a *challenge and response protocol*.
 3. The car accepts the challenge and opens
 Being the mechanism stateless, there is no issue of losing permanently syncronization and replay attacks are prevented.
 
-*** Secure channels
+** Secure channels
 
 A *secure channel* is a pipe between two end points that implements a secure protocol
 - Data origin authentication, data integrity and confidentiality are usually provided at this level.
