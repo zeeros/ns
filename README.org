@@ -3,16 +3,11 @@
 Collection of notes and code about the Network Security course, part of the Master in Computer Science at the Università di Trento (UNITN).
 
 * [[file:notes/netsec_fundamentals.org][Network security fundamentals]]
-* Network aspects
-** [[file:notes/tcpip_101.org][TCP/IP protocol 101]]
-** [[file:notes/ipsec.org][IPSec]]
-** [[file:notes/wlan.org][WLAN]]
-** DNS
+* [[file:notes/tcpip_101.org][TCP/IP protocol 101]]
+* [[file:notes/ipsec.org][IPSec]]
+* [[file:notes/wlan.org][WLAN]]
+* [[file:notes/dns.org][DNS]]
 * [[file:notes/vulnerabilities.org][Vulnerabilities]]
 * [[file:notes/attacks.org][Attacks]]
 * [[file:notes/deftech.org][Defensive technologies]]
-** System hardening
-** Firewalls
-** IDSs
-** Advanced memory techniques
 * [[file:notes/privacy.org][Privacy in networks]]
