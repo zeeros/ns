@@ -19,7 +19,7 @@ In addition, other properties may be involved
 
 * Trust
 
-A *trusted computing base* (*TCB)* (trusted computing bases) is the set of hardware, firmware, software critical to the security of a computer system: since a breach of TCB might jeopardize thesecurity properties of the entire system, reducing its size is a key aspect of computer security.
+A *trusted computing base* (*TCB)* is the set of hardware, firmware, software elements critical to the security of a computer system: since a breach of TCB might jeopardize the security properties of the entire system, reducing its size is a key aspect of computer security.
 
 On "Reflection on Trusting Trust" by Ken Thompson [fn:1] [fn:2], the first lines of the paper asks
 
@@ -40,10 +40,10 @@ CIA properties and the concept of trust are still the main concern in the contex
 - Integrity :: Altering packets through message spoofing.
 - Availability :: Router drops packets due to a DoS.
 
-And the problem of trust in tthe network context is extended to senders, receivers and channels. In such a complex ecosystem like modern day networks, we have to take into consideration issues related to
-- The (real) client-server communication :: A classic, high level client-server model often hides a complex reality made by many intermediary points (e.g. routers, gateways, ISPs, DNSs) and replies coming from different parties.
+And the problem of trust in tthe network context is extended to senders, receivers and channels. In such a complex ecosystem like modern-day networks, we have to take into consideration issues related to
+- The (real) client-server communication :: A classic, high level client-server model often hides a complex reality made by many intermediate points (e.g. routers, gateways, ISPs, DNSs) and replies coming from different parties.
 - Etherogeneous protocols and technologies :: A wide range of protocols and technologies is adopted in networking (and computing in general), and the joint points of this different architectures are the perfect spot for vulnerabilties.
-- Legacy issues :: Adoption of new versions of protocols is slow, often hosts have to lower their secuirty level for itneroperability and expose themself to risks (e.g. IPv6 and IPv4).
+- Legacy issues :: Adoption of new versions of protocols is slow, often hosts have to lower their security level for interoperability and expose themself to risks (e.g. IPv6 and IPv4).
 
 * Attack models
 
@@ -62,7 +62,7 @@ The continuous increase of attack points in the current systems affects all the 
 
 The attacker is omnipotent and acts as a *man-in-the-middle*: he can overhear, intercept and synthesize any message over the network to compromise CIA properties. Its only contraint is the use of cryptographic methods.
 
-A man-in-the-middle attacks is still possible in smaller networks, but unfeasible in big packet switching networks: the attacker has to be aware of the entire physical path taken by the packet (with its intermediary hops). In big networks, it is more suitable to act near the end-points (e.g. *man-in-the-browser* attack).
+A man-in-the-middle attack is still possible in smaller networks, but unfeasible in big packet switching networks: the attacker has to be aware of the entire physical path taken by the packet (with its intermediary hops). In big networks, it is more suitable to act near the end-points (e.g. *man-in-the-browser* attack).
 
 ** Honest-but curious attacker (HBC)
 
