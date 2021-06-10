@@ -2,9 +2,7 @@
 
 Collection of notes and code about the Network Security course, part of the Master in Computer Science at the Università di Trento (UNITN).
 
-* Introduction
-** [[file:notes/netsec_fundamentals.org][Network security fundamentals]]
-** [[file:notes/att_models.org][Attacker Models]]
+* [[file:notes/netsec_fundamentals.org][Network security fundamentals]]
 * Network aspects
 ** [[file:notes/tcpip_101.org][TCP/IP protocol 101]]
 ** [[file:notes/ipsec.org][IPSec]]

@@ -1,37 +1,72 @@
 #+TITLE: Network security fundamentals
 
-* Preserving security
+* Computer security
 
-Computer security is about *preserving* (not creating) security regarding information and its core security properties, known as *CIA triad*
+From the NIST Computer Security Handbook:
+
 #+BEGIN_QUOTE
-The protection afforded to an automated information system in order to attain the applicable objectives of preserving the integrity, the availability and confidentiality of information systems resources.
+Computer security security is the protection afforded to an automated information system in order to attain the applicable objectives of preserving the integrity, the availability and confidentiality of information systems resources.
 #+END_QUOTE
-- Confidentiality :: The information is accessible only by who is authorized
-- Integrity :: The information is accurate and correct
-- Availability :: The information can be reached when needed
-Additional properties may be also be preserved
-- Accountability :: Actions on the information are accountable to somebody/something
-- Non-repudiation :: Actions on the information can't be refused by its author
+
+Computer security is not about creating, but *preserving* security of information and its core security properties known as *CIA triad*
+- Confidentiality :: Information is available only to *authorized entities* (e.g. through cryptography).
+- Integrity :: Information is *accurate* and *complete* (e.g. secure hardware).
+- Availability :: Information is *available* when needed (e.g. redundancy).
+In addition, other properties may be involved
+- Accountability :: Actions on the information are accountable to an entity.
+- Non-repudiation :: Authors can't repudiate their actions on the information.
 - Authentication :: Of user, messages, etc.
 
-Any computer security rieles on *TCBs* (trusted computing bases) built with trusted parts
-- Trusted parts always include hardware, firmware and software
-- If a trusted component is breached, the security properties of the entire system may be compromised
-- Minimizing the size of the TCB is key to deal with security
+* Trust
 
-* TODO "Reflection on Trusting Trust" by Ken Thompson [fn:1] [fn:2]
+A *trusted computing base* (*TCB)* (trusted computing bases) is the set of hardware, firmware, software critical to the security of a computer system: since a breach of TCB might jeopardize thesecurity properties of the entire system, reducing its size is a key aspect of computer security.
+
+On "Reflection on Trusting Trust" by Ken Thompson [fn:1] [fn:2], the first lines of the paper asks
+
+#+BEGIN_QUOTE
+To what extent should one trust a statement that a program is free of Trojan horses? Perhaps it is more important to trust the people who wrote the software.
+#+END_QUOTE
+
+The paper moral is simple
+
+#+BEGIN_QUOTE
+The moral is obvious. You can't trust code that you did not totally create yourself. (Especially code from companies that employ people like me.) No amount of source-level verification or scrutiny will protect you from using untrusted code.
+#+END_QUOTE
+
 * Network security
 
-The goal is still to preserve the CIA properties, threats may be for example
-- Confidentiality :: Raeding packets by message spoofing
-- Integrity :: Altering packets with message spoofing
-- Availability :: DoS, router dropping all the packets
+CIA properties and the concept of trust are still the main concern in the context of network security. For example, possible threats to the CIA triad may be
+- Confidentiality :: Reading packets by message spoofing.
+- Integrity :: Altering packets through message spoofing.
+- Availability :: Router drops packets due to a DoS.
 
-However, network securities adds even more challenges
-- The (real) client-server communication :: A classic, high level client-server model often hides a complex reality where many intermediary points (routers, gateways, ISPs, DNSs) and responses coming from different parties.
-- Etherogeneous protocols and technologies :: A wide range of protocols and technologies is adopted in networking (and computing in general). However, the joint points of this different architectures often hide *vulnerabilties*.
-- Legacy issues :: The adoption of new versions of protocols is often slow, exposing many hosts to risk and lowering the security level
-(e.g. IPv6 and IPv4)
+And the problem of trust in tthe network context is extended to senders, receivers and channels. In such a complex ecosystem like modern day networks, we have to take into consideration issues related to
+- The (real) client-server communication :: A classic, high level client-server model often hides a complex reality made by many intermediary points (e.g. routers, gateways, ISPs, DNSs) and replies coming from different parties.
+- Etherogeneous protocols and technologies :: A wide range of protocols and technologies is adopted in networking (and computing in general), and the joint points of this different architectures are the perfect spot for vulnerabilties.
+- Legacy issues :: Adoption of new versions of protocols is slow, often hosts have to lower their secuirty level for itneroperability and expose themself to risks (e.g. IPv6 and IPv4).
+
+* Attack models
+
+An *attack model* describes the capabilities, assumptions, reasons of an attacker to deliver an attack. Often omitted in protocols and security literature, it is a fundamental information since a set of security properties is guaranteed only when dealing with the same attacker model.
+
+An attacker can deliver an
+- Outsider attack :: By infiltrating the communication channel in between hops the attacker can impersonate a client, modify connections and routing tables, etc.
+- Insider attack :: By legally accessing the system to act maliciously.
+
+The continuous increase of attack points in the current systems affects all the security stages
+- Prevention :: It is the easiest step to deal with and has experienced considerable improvements. Still, it is not bullet-proof and failures will always affect this stage.
+- Detection :: Especially critical, but the current complexity of systems prevents any security expert to assure that a system is completely secure.
+- Mitigation :: Still requires a lot of manual effort and its costly.
+
+** Dolev-Yao model (or outright malicious attacker)
+
+The attacker is omnipotent and acts as a *man-in-the-middle*: he can overhear, intercept and synthesize any message over the network to compromise CIA properties. Its only contraint is the use of cryptographic methods.
+
+A man-in-the-middle attacks is still possible in smaller networks, but unfeasible in big packet switching networks: the attacker has to be aware of the entire physical path taken by the packet (with its intermediary hops). In big networks, it is more suitable to act near the end-points (e.g. *man-in-the-browser* attack).
+
+** Honest-but curious attacker (HBC)
+
+The most adopted model in the context of network security: the attacker is a legitimate participant that acts accordingly to the communication protocol, but attempts to learn all possible information from received messages. The attacker tipically resides at the service level and profiles the client, potentially compromising both confidentiality and integrity.
 
 * Footnotes
 
