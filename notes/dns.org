@@ -45,4 +45,4 @@ A lower ranking NS may ask to an authorative to dump copy over TCP the entire zo
 
 ** DNSSec
 
-The previous atatcks ar enot possible with *DNSSec*, that implements secure DNS with authentication and integrity (confidentiality is not required) checks with a public-key infrastructure.
+The previous attacks are not possible with *DNSSec*, that implements secure DNS with authentication and integrity (confidentiality is not required) checks with a public-key infrastructure.
