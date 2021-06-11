@@ -1,48 +1,50 @@
 #+TITLE: DNS
 
-*Domain Name Service* (*DNS*) is a hierarchical and decentralized naming systems that translates human-readable domain names to IP addresses. DNS primarly uses UDP on port 53 to serve requests.
-- Queries and replies use a 16 bits ID (originally incremental query ID).
-- The protocol doesn't deal with security.
+* DNS
 
-We will focus on two types of records: *A*, that stores IP addresses =[domain.name] A [ip-address]=, and *NS*, that stores DNS servers to query =[domain.name] NS [domain.dns.server]=.
+*Domain Name Service* (*DNS*) is a hierarchical and decentralized naming system for computers, services, or other resources connected to the Internet or a private network. DNS primarly uses UDP on port 53 to serve requests, requests and replies are identified by a 16-bit QID (incremental in the original implementation).
 
-In the DNS hierarchy, DNS servers may be
-- Authoritative :: That answers to queries on a partition of domain names.
-- Recursive :: Forwards queries to authorative DNSs
+We will focus on two types of records
+- A :: that stores IP addresses =[domain.name] A [ip-address]=
+- NS :: that stores DNS servers to query =[domain.name] NS [domain.dns.server]=
 
-Name servers use caches for performance optimization, with a TTL set by the server answering the query.
+The DNS hierarchy is composed by
+- Authoritative NS :: Answering to queries on a partition of domain names.
+- Recursive NS :: Forwarding queries to authorative DNSs.
+
+Name servers cache answers for performance optimization for a TTL set by the queried server.
 
 #+CAPTION: DNS Hierarchy and example of an iterative query.
 [[./img/dns_hierarchy.jpg]]
 
-** Cache poisoning
+* Cache poisoning and Kaminsky vulnerability
 
-DNS provides no real authentication and anybody can impersonate an authorative server, since the recursive name server use a 16 bits QID. An attacker may guess the QID, and deliver a *cache poisoning attack*.
-
-The QID may be guessed by either a
+The DNS protocol provides no authentication mechanism, so the attacker can spoof DNS responses by guessing the 16 bits QID and deliver a *cache poisoning attack* through a well built =A= response. The QID may be guessed by either a
 - MITM attack, if the attacker is in the same LAN of the recursive NS.
 - Impersonating an authorative NS.
 
-#+CAPTION: If the attacker wins the race condition against an authoritive NS, maybe with the help of a DoS attack, the attacker can poison the recursive NS (that accepts the first answer and drops the second). Poisoning a recurrent NS has the power to redirect all the queries that will be made to it.
+If the attacker wins the race condition against an authoritive NS, maybe with the help of a DoS attack, the attacker can poison the recursive NS (that accepts the first answer and drops the second). Poisoning a recurrent NS has the power to redirect all the queries that will be made to it.
+
 [[./img/dns_poisoning.jpg]]
 
-** Kaminsky vulnerability
-
-By poisoning =NS= records instead of =A= records the attacker can control intere subdomains.
+Presented in 2008, the *Kaminsky vulnerability* exploits two factors
+- In the original implementation the 16-bits QID is increamental, easy to predict if the attacker can intercept a single query.
+- By responding to the recursive DNS with a =NS= record instead of =A= record, the attacker can control an intere subdomain by replacing the authorative server.
 
 [[./img/kaminsky_attack.jpg]]
 
-The vulnerability is due to the shirt size of the QID (16 bits): assuming changing the ID size to 32 bits is unfeasible, mitigation involves randomizing the source port (+16 bits, with some reserved values) to increase entropy, so any answer that doesn't match QID and the port is dropped.
-** DNS amplification attack
+* Other attacks
 
-Amplification attacks are possible when the request is much smaller than the answer. In DNS, by spoofing the source IP address, the victim can be flooded by bigger DNS answers.
+In general, amplification attacks exploit protocols where requests can be much smaller than the response. With a *DNS amplification DoS attack* the attacker spoofs the target and sends =ANY= queries, which returns all known information about a DNS zone (60B vs 3KB), to flood the victim.
 
 [[./img/dns_amplification.jpg]]
 
-** DNS zone transfer
+A *DNS zone transfer* is a type of transaction where a DNS server passes a copy of part of it's database (which is called a "zone") to another DNS server.
 
-A lower ranking NS may ask to an authorative to dump copy over TCP the entire zone DB, but since DNS information are publicly available also an attacker can do it to acquire knowledge of the zone and facilitate attacks.
+The *DNS zone transfer* is a transaction thatallows to ask to an authorative to dump copy over TCP the entire zone DB, and can be used by an attacker to acquire knowledge of a zone.
 
-** DNSSec
+* Mitigation
 
-The previous attacks are not possible with *DNSSec*, that implements secure DNS with authentication and integrity (confidentiality is not required) checks with a public-key infrastructure.
+Today these types of attack are outdated, several mitigations have been developed
+- Upgrade to BIND v9 :: BIND is a suite of software for interacting DNS. The first solution to the poisoning issue was randomizing the source port, making the job harder to guess both QID and the port (for a total of 32 bits instead of 16).
+- DNSSEC :: The standard provides authentication with cryptography over DNS, however its deployment is affected by backward-compatibility issues, agreement on root keys ownership and lack of support.
