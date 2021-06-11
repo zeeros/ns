@@ -14,7 +14,8 @@ The DNS hierarchy is composed by
 
 Name servers cache answers for performance optimization for a TTL set by the queried server.
 
-#+CAPTION: DNS Hierarchy and example of an iterative query.
+DNS Hierarchy and example of an iterative query.
+
 [[./img/dns_hierarchy.jpg]]
 
 * Cache poisoning and Kaminsky vulnerability

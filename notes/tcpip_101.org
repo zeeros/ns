@@ -19,8 +19,9 @@ The OSI model define a standard stack of communication protocols
 
 The lowest logical layer interconnects physical interfaces, that are uniquely identified by a *MAC* address in a LAN. The MAC address is a 48-bit identifier (=HH-HH-HH-HH-HH-HH= in HEX notation), with the first 24 bits identifing the manufacturer (who assigns the last 24 bits). While the address should be uniquely assigned by the manifacturer, it can be easily changed by the user and shouldn't be used as security mechanism.
 
-#+CAPTION: Frames are sent over ethernet on a broadcast and shared channel, the receiver is the only host that doesn't drop the frame.
 [[./img/frame_example.jpg]]
+
+Frames are sent over ethernet on a broadcast and shared channel, the receiver is the only host that doesn't drop the frame.
 
 * Network layer
 ** ARP, poisoning and MITM attack
@@ -29,10 +30,10 @@ The *Address Resolution Protocol* (*ARP*) is a declarative protocol used to disc
 - ARP request-response :: Hosts send a broadcast message request to ask for the MAC address of a given IP address.
 - Gratuitous ARP (GARP) :: Hosts send a broadcast, gratuitous message response when joining a LAN.
 
-#+CAPTION: Wireshark capturing an ARP request-reply
+Wireshark capturing an ARP request-reply and a broadcast request
+
 [[./img/ARP_rr_example.jpg]]
 
-#+CAPTION: Wireshark capturing a broadcast request
 [[./img/ARP_broadcast_example.jpg]]
 
 Since ARP provides no authentication method, an attacker can continuously sends gratuitous ARP responses to poison the target ARP table and deliver a MITM attack. While the protocol works only in the confinement of the same network, such attack can be used in support of other techniques (e.g. DNS spoofing).
@@ -72,9 +73,8 @@ The *traceroute* command relies on ICMP to display possible routes (paths) and m
 
 ** Fragmentation
 
-The IPv4 header is variable in size due to the Options field: the IHL field contains the size of the IPv4 header, it has 4 bits that specify the number of 32-bit words in the header. It can range between 5 (5 × 32 bits = 160 bits = 20 bytes) and 15 words (15 × 32 bits = 480 bits = 60 bytes). The Options field guarantees some flexibility to the protocol, but also an entry point for an attacker to establish a covert channel.
+The IPv4 header is variable in size due to the Options field: the IHL field contains the size of the IPv4 header, it has 4 bits that specify the number of 32-bit words in the header. It can range between 5 (5 × 32 bits = 160 bits = 20 bytes) and 15 words (15 × 32 bits = 480 bits = 60 bytes). The Options field guarantees some flexibility to the protocol, but also an entry point for an attacker to establish a covert channel. The IPv4 header is shown below.
 
-#+CAPTION: IPv4 header
 [[./img/ipv4_header.jpg]]
 
 IP fragmentation breaks packets into fragments, so that the resulting pieces can pass through a link with a smaller Maximum Transmission Unit (MTU) than the original packet size. The fragments are reassembled by the receiving host.
@@ -95,7 +95,8 @@ Consider the following fragmentation example: we have 4,200 bytes of data to sen
 | MF Flag         |          1 |          1 |          0 |
 | Offset          |          0 |       1480 |       2960 |
 
-#+CAPTION: If an intermediate router has no timeout on fragment reassembly, a simple DoS attack can be mounted by a client sending a series of fragments for a packet,  none of them having zero offset.
+If an intermediate router has no timeout on fragment reassembly, a simple DoS attack can be mounted by a client sending a series of fragments for a packet,  none of them having zero offset.
+
 [[./img/fragment_timeout.jpg]]
 
 ** DoS attacks
@@ -107,9 +108,8 @@ The ICMP protocol can be used to deliver several type of DoS attacks
 * Transport layer
 ** TCP and SYN Dos
 
-*Transmission Control Protocol* (*TCP*) builds, over IP, a stateful channel to exchange data segments in a reliable, ordered, and error-checked way. A TCP connection is uniquely identified by source and destination addresses (IP) and their port (TCP), all stored in the header. Some destination ports are reserved (<1024, SSH:22, HTTP:80, HTTP:443, FTP:21), while the source port is randomly assigned.
+*Transmission Control Protocol* (*TCP*) builds, over IP, a stateful channel to exchange data segments in a reliable, ordered, and error-checked way. A TCP connection is uniquely identified by source and destination addresses (IP) and their port (TCP), all stored in the header. Some destination ports are reserved (<1024, SSH:22, HTTP:80, HTTP:443, FTP:21), while the source port is randomly assigned. The TCP header is shown below.
 
-#+CAPTION: The TCP header
 [[./img/tcp_header.jpg]]
 
 Code bits contains a set flags, among them
@@ -122,7 +122,8 @@ Code bits contains a set flags, among them
   - SYN = 0 :: Accumulated sequence number of the first data byte of this segment for the current session.
 - ACK number :: If the ACK flag is set then the value of this field is the next sequence number that the sender of the ACK is expecting. This acknowledges receipt of all prior bytes (if any). The first ACK sent by each end acknowledges the other end's initial sequence number itself, but no data.
 
-#+CAPTION: TCP 3-way start (SYN) vs 4-way ending (FIN) handshake. Note that in 4-way the last client may abruptly close the connection without sending the last ACK, otherwise he waits for a time window to send the final ACK.
+TCP 3-way start (SYN) vs 4-way ending (FIN) handshake. Note that in 4-way the last client may abruptly close the connection without sending the last ACK, otherwise he waits for a time window to send the final ACK.
+
 [[./img/TCP3+4hs.jpg]]
 
 In states =SYN_RCVD= (server) and =ESTABLISHED= (client) both part establish a *Transmission Control Block* (*TCB*), a special data structure that stores information about the connection kept alive until the connection ends.
