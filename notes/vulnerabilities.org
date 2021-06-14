@@ -6,7 +6,6 @@ A *bug* is a problem in the execution of the software that leads to unexpected b
 - Type :: Logic, configuration, design, implementation
 - Fix priority :: Ranks how severe the bug is
 
-
 A *vulnerability* is a bug that causes a security breach or a violation of the system's security policy. Vulnerabilities can involve configuration, infrastructure or software, but our focus will be on software vulnerabilties.
 
 The grand majority of vulnerabilities are *undisclosed*, many organizations (such as MITRE) try to disclose them resulting in an increasing number of disclosed vulnerabilities each year.

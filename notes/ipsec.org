@@ -1,63 +1,62 @@
 #+TITLE: IPsec
 
-* IP security concerns and requirements
+* IP security concerns and requirements [fn:1]
 
-Since IPv4 was designed with no security concerns, the protocol is affected by
-- Lack of confidentiality, allowing credentials theft (e.g. HTTP passwords sent in clear)
-- Lack of source authentication, an open door for spoofing and DoS attacks
-- Source routing, allowing spoofign and packet redirection
+Before IPv4 was introduced, the Internet scale is small, and Internet security is ensured by physical isolation. Because explosive growth of the Internet was beyond expectation, IPv4 security protection means were not considered during IPv4 design and development.
 
-A protocol designed to secure IP should implement at
-- Application level :: Transparency to applications and users above transport layer, that can use either IP or IPSec
-- Host level :: Securing end points.
-- Router level :: Only authorized routers should advertise nodes, while the processing of the packet should be at source and destination to prevent payload exposure.
+Because IP does not provide any security, IP addresses are easily forged, contents in IP packets can be tampered with, and packets can be replayed or intercepted in transit. Therefore, the security of the received IP packets cannot be ensured.
 
-* IPSec basics
+* IPSec, AH and ESP
 
-*IPsec* is a secure network protocol suite over IP, providing connectionless data integrity, data origin authentication, rejection of replayed packets, confidentiality (through encryption) and limitations to traffic analysis capabilities.
+*IPSec*, developed as an IPv4 enhancement, uses encryption and authentication to provide
+- User data encryption :: To ensure confidentiality of user data.
+- Data integrity :: To prevent tampering during transmission through authentication.
+- Data origin authentication :: To ensure that data comes from real senders.
+- Anti-replay :: To prevent malicious users from sending captured packets, the receiver discards duplicate packets.
+
+IPsec encapsulates or decapsulates IP packets using
+- Authentication Header (AH) :: Used to authenticate data source, verify data integrity, and prevent packet replay. It does not support encryption.
+- Encapsulating Security Payload (ESP) :: Used to encrypt data, authenticate data origin, verify data integrity, and prevent packet replay.
+
+When AH and ESP are used together, ESP is used prior to AH because of the following reason
+- AH authenticates the entire IP packet.
+- The ESP header and tail change the length of the IP packet, and the filling fields of ESP also change the length of the IP packet.
+- If AH is used prior to ESP, AH authentication fails.
+
+[[./img/ah_esp.jpg]]
 
 The protocol suite can operate in
-- Transport mode :: With IPsec-aware hosts and end points, providing upper-layer security.
-- Tunnel mode :: With unaware hosts and applied by intermediate gateways.
+- Transport mode :: The IP payload is encrypted, not the header. The source and destination addresses of the IPsec tunnel must be the source and destination addresses in the IP packet header, therefore the mode is used only between IPsec-aware hosts.
+- Tunnel mode :: The entire IP packet is encrypted and encapsulated into a new IP packet by an intermediate IPsec gateway. Being the original IP packet header hidden, the tunnel mode is mainly applicable to communications between VPN gateways or between a host and a VPN gateway. The tunnel mode is more secure than the transport mode since the original IP packet can be authenticated and encrypted completely. Besides, the internal IP address, protocol type, and port are hidden. Howver, the tunnel mode occupies more bandwidth because of an extra IP header.
 
 [[./img/ipsec_transport_tunnel.jpg]]
 
-** AH protocol
+For authenticated encryption, IPSec relies on a *Encrypt-then-MAC* (*EtM*) approach. Below, the method is compared to alternatives like Encrypt-and-MAC (E&M) and MAC-then-Encrypt (MtE).
 
-*Authentication header* (*AH*) provides authentication and integrity, with
-- Stateful tunneling using sequence numbers.
-- Authentication of the whole payload and most of the header, including the source IP address (preventing spoofing) and AH sequence number.
-- Different possible cryptographic settings.
+[[./img/auth_encryption.jpg]]
 
-[[./img/ah_transport_tunnel.jpg]]
+* IPSec SA and keys management
 
-** ESP protocol
+A *Security Association* (*SA*) is the establishment of shared security attributes between two network entities to support secure communication. In IPSec, SAs are setup up by
+- Out-of-band key sharing :: Manually configure static encryption and authentication keys on the initiator and responder devices. The consistency of keys on both ends can be ensured through out-of-band key sharing (through telephone calls or emails). The method does not provide much scalability. The workload increases by multiple times in site-to-multisite networking. Besides, to enhance network security, the key requires periodical changes, which is difficult to implement in this method.
+- Key delivery using a secure connection :: IPSec implements secure key negotiation between the initiator and responder devices using the IKEv1 or IKEv2 protocols. This method provides simple configuration and high scalability, which becomes more remarkable on large-scale dynamic networks.
 
-*Encapsulation security protocol* (*ESP*) can provide
-- Confidentiality :: Of payload, not the sequence number.
-- Authentication :: Of payload, no header fields.
+The essence of IKE is that it never transmits the key directly on insecure networks, but calculates the key by exchanging a series of data. Even if a third party intercept all the exchanged data used for key calculation, it cannot figure out the real key.
 
-[[./img/esp_transport_tunnel.jpg]]
+The core technology is *Diffie Hellman* (*DH*), or public key exchange method, that uses the ISAKMP messages to perform key material exchange between the initiator and responder devices. Then, the devices at both ends calculate the same symmetric key. The symmetric key is used for the calculation of encryption and authentication keys. The two devices do not exchange the real key in any cases.
 
-For encapsulation and encryption, IPSec adopts an *Encrypt-then-MAC* method
-- Encrypt-then-MAC (IPsec) :: Given a message $M$, encrypt it as $C=Enc(M,K_E)$ with key $K_E$ and compute the $MAC(C,K_I)$.
-- Encrypt-and-MAC (SSH) :: Given a message $M$, encrypt it as $C=Enc(M,K_E)$ with key $K_E$ and compute the $MAC(M,K_I)$.
-- MAC-then-Encrypt (SSL) :: Given a message $M$, compute its $MAC(M,K_I)$ with key $K_I$ and encrypt $M+MAC$ with key $K_E$.
-** Keys management
+[[./img/dh.jpg]]
 
-With *security association* (*SA*) two parties share security attributes (e.g. algorithms, keys) to setup a secure channel. IPSec provides a range of options (ESP/AH, Tunnel/Transport, sender, receiver, protocol, port) for the SA, each combination requiring a different key. The management of these keys may be
-- Manual :: Only suitable for small networks or testing purposes.
-- IKE :: Internet Key Exchange, affected by bad documentation and lack of devices support.
-- IKEv2 :: Current version of IKE, addressing previous problems.
+If a third party on the network intercepts c and d, the third party needs to obtain a and b to calculate the public DH value (gabmod(p)). However, a and b are not directly transmitted on the network. If the third party intends to calculate a or b using c and d, discrete logarithm operation is required. However, p is a prime number. When p is large enough (generally, a binary number with more than 768 bits), the calculation is extremely complex, proved mathematically.
 
-IPSec relies on *Authenticated DS*. *Diffie-Hellman* (*DH*) is a widely used public-key algorithm for key exchange that relies on discrete logarithm problem to prevent eavesdropping.
+For the *Authenticated DH*, A and B also own asymmetric key pairs usable for digital signatures: A signs whatever she sends to B, and B verifies that signature (using A's public key). B does the same for A.
 
 To decided which protection a packet should have in a traffic stream, each IPsec nodes uses
 - Security Parameter Index (SPI) :: Tag that identifies a SA.
 - Security Policies DB (SPD) :: Stores IPSec policies that deﬁne which traffic to be protected, how it is to be protected, and with whom to protect it. The policy is defined by selectors such as source and destination IP Addresses/ports and protocols.
 - Security Association DB :: Stores SAs indexing them by SPI, source/destination addresses and protocol (e.g AH, ESP).
 
-For example, having two hosts =A=, =B= connected via IPsec in Transport mode and two intermediate gateways =C=, =D= connected via Tunnel mode (=A= goes through =C=, =B= goes through =D=), we might the following entries
+For example, having two hosts =A=, =B= connected via IPsec in Transport mode and two intermediate gateways =C=, =D= connected via Tunnel mode (=A= goes through =C=, =B= goes through =D=), the entries would be somethin glike the following
 
 | Entry  | From | To  | Protocol | Port | Policy       | SPI | SA Record    | Tunnel destination |
 |--------+------+-----+----------+------+--------------+-----+--------------+--------------------|
@@ -69,5 +68,9 @@ For example, having two hosts =A=, =B= connected via IPsec in Transport mode and
 Some recurrent configurations for SAs are the following
 - End-to-end IPsec in Transport mode between IPsec-aware hosts with some SAs.
 - Gateway-to-gateway IPsec in Tunnel mode between gateways (used for VPNs).
-- Combination of the previous two, Trasnport mode encapsulated in Tunnel mode.
+- Combination of the previous two, Transport mode encapsulated in Tunnel mode.
 - Remote host support, with IPsec tunnel from client a security gateway and SAs from gateway to server.
+
+* Footnotes
+
+[fn:1] [[https://support.huawei.com/enterprise/en/doc/EDOC1100055047/e23032b6/introduction-to-ipsec][Introduction to IPsec - huawei.com]]
