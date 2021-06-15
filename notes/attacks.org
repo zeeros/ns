@@ -2,11 +2,12 @@
 
 * Basic malware model
 
-A *malware* is a malicious program acting with no conscious or designed authorization. Malwares may need an host (e.g viruses, logic bombs, backdoors) or be independent self-contained programs (e.g. worms, bots), possibly with replicating capabilities.
-- Keylogger :: Logs input to catch sensitive data and stor eit remotely. Today keyloggers exploit lousy devices control of modern OSs (for performance reasons) to act in user mode with no special privilege.
+A *malware* is a malicious program acting with no conscious or designed authorization. Malwares may need an host (e.g viruses, logic bombs, backdoors) or be independent self-contained programs (e.g. worms, bots), possibly with replicating capabilities. Some typical malware instances can be
+
+- Keylogger :: Logs input to catch sensitive data and store it remotely. Today keyloggers exploit lousy devices control of modern OSs (for performance reasons) to act in user mode with no special privilege.
 - Ransomware :: Blocks access to a system until a sum of money is paid.
-- Viruses :: Installs an replicates itself with no user consent using. Its characterized by an infection mechanism, trigger and payload and can either prepend, postpend or embed an infected program.
-  - Macro virus :: Exploit macro capabilities for office suite in any OS.
+- Virus :: Installs an replicates itself with no user consent. Its characterized by an infection mechanism, trigger and payload and can either prepend, postpend or embed an infected program.
+  - Macro virus :: Popular in mid-90s, exploits macro capabilities for office suite in any OS.
   - Email virus :: Delivered as an email attachment, spreads itself to the contact list.
   - Boot sector virus :: Manages to write to the MBR to comprimise the boot chain and load a modified kernel.
 - Rootkit :: Injects the kernel by controlling the MBR, with no replication capabilities
@@ -23,7 +24,7 @@ A *bootent* is a network of infected peers that are instructed by a bot herder t
   - Leeching :: Use an existing network to enlist bots in or out of the network.
   - Bot-only :: An ad-hoc network is built among the bots.
 
-** Countermeasures evolution
+* Countermeasures evolution
 
 Virus detection evolution
 - Signature scanners :: Try to match a signature of known malwares, only a reaction system for known malwares.
