@@ -1,4 +1,4 @@
-#+TITLE: Malware
+#+TITLE: Attacks
 
 * Basic malware model
 
@@ -56,3 +56,39 @@ An example of malware targeting IoT devices is the *Mirari* botnet
 
 #+CAPTION: The attacker targets an IoT via telnet and guesses credentials by brute force, installing the malware and reporting details of the new victim to a report server. The C2 server is aware of the overall status, and as soon as enough devices are compromised it launches the attack.
 [[./img/mirai.jpg]]
+* Attacks throught the Web
+
+The attacker acts in an adversial setting against security research and firms, but also other fellow attackers. Different strategies may be employed by the attacker to find an economical equilibrium point, targeting either a
+- High propagation rate :: Internet worms act as self-propagating and self-contained malwares are allowing to provide fast propagation to reach more targets. However, more samples means higher detection rate.
+- Low propagation rate :: A stealth approach with a low number of infections.
+
+Today the self-propagation mechanism approach, being difficult to predict its propagation, is abandoned in favor of request-reply mechanisms: existing services on the web are leveraged to distribute the malware (mebroot). Infection is delivered by combining different vectors, mechanisms include
+- Service infection :: Attacking services and servers is becoming more difficult.
+- Client infection :: Clients are not as protected as servers and can be redirected to an infection point.
+
+The main vector for client infection are web browsers, with three main browser sharing most of the market and browser plugins increasing the vector attack.
+
+With domain compromisation through *Cross-site scripting* (*XSS*) attackers to inject client-side scripts into web pages viewed by other users, leveriging the mutual trusts between browser and server. Content can be compromised through
+- Persistent XSS :: The attacker manages to compromise the server and inject its conent on any user retrieving the infected resourse.
+- Content compromisation :: Can be delivered through unsanitized content (e.g. via JS).
+- Thrid-party content :: The same-origin policy prevents frames to access content of other frames. However, by trusting a a web page a trust chain goes through all the frames loaded by the page. A drive-by download attack includes unintentional downloads of any files or bundled software onto a computer device.
+
+An *exploit kit* is a collection of exploits with is a simple one-in-all tool for managing a variety of exploits altogether, reacheable from any of the previous mechanisms. Since highly accessed web sites are usually well protected, usually this attacks are delivered from the attacker's site and maladvertised (advertised like any other normal site). The attack may buy traffic such as
+- Skimmed traffic :: User clicks on some content and the attacker website is opened instead.
+- Popunder traffic :: User clicks on some content and a new tab is opened with the attacker page.
+* Advanced DoS attacks
+
+#+CAPTION: A botnet can be used to deliver a DDoS attack. While the victim can't use a blacklist, the size of the attack is limited by the number of bots.
+[[./img/botnet_ddos.jpg]]
+
+#+CAPTION: With the use of reflectors the attack can be delivered by any server that is open to receive a connection request by spoofing the IP(v4) of the victim a source.
+[[./img/reflected_ddos.jpg]]
+
+#+CAPTION: A DNS amplification attack can be used to overwhelm the victim, any other protocol with big ratio between size of request and response (e.g. NTP command monlist).
+[[./img/amplification_attack.jpg]]
+
+Mitigatign DDoS attacks is challenging
+- Source identification :: Identifying the source of the attack and cutting it off is a problem with IP spoofing and reflectors.
+- Capabilities :: The connection initiator must ask (and receive a grant) to connect to the receiver, who decides depending on the capability (chain of unique hash set by the routers). Routers check validity of the capability, and drop if invalid. While this prevents spoofing, however a Denial of Capability attack may be performed on the channel (that is only 5% of the downstram bandwidth).
+
+The *Coremelt attack* doesn't target hosts, but links: pair of hosts send traffic in away that targets always the same link.

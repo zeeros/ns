@@ -27,7 +27,7 @@ When AH and ESP are used together, ESP is used prior to AH because of the follow
 
 The protocol suite can operate in
 - Transport mode :: The IP payload is encrypted, not the header. The source and destination addresses of the IPsec tunnel must be the source and destination addresses in the IP packet header, therefore the mode is used only between IPsec-aware hosts.
-- Tunnel mode :: The entire IP packet is encrypted and encapsulated into a new IP packet by an intermediate IPsec gateway. Being the original IP packet header hidden, the tunnel mode is mainly applicable to communications between VPN gateways or between a host and a VPN gateway. The tunnel mode is more secure than the transport mode since the original IP packet can be authenticated and encrypted completely. Besides, the internal IP address, protocol type, and port are hidden. Howver, the tunnel mode occupies more bandwidth because of an extra IP header.
+- Tunnel mode :: The entire IP packet is encrypted and encapsulated into a new IP packet by an intermediate IPsec gateway. Being the original IP packet header hidden, the tunnel mode is mainly applicable to communications between VPN gateways or between a host and a VPN gateway. The tunnel mode is more secure than the transport mode since the original IP packet can be authenticated and encrypted completely. Besides, the internal IP address, protocol type, and port are hidden. However, the tunnel mode occupies more bandwidth because of an extra IP header.
 
 [[./img/ipsec_transport_tunnel.jpg]]
 

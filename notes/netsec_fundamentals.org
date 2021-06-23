@@ -40,7 +40,7 @@ CIA properties and the concept of trust are still the main concern in the contex
 - Integrity :: Altering packets through message spoofing.
 - Availability :: Router drops packets due to a DoS.
 
-And the problem of trust in tthe network context is extended to senders, receivers and channels. In such a complex ecosystem like modern-day networks, we have to take into consideration issues related to
+And the problem of trust in the network context is extended to senders, receivers and channels. In such a complex ecosystem like modern-day networks, we have to take into consideration issues related to
 - The (real) client-server communication :: A classic, high level client-server model often hides a complex reality made by many intermediate points (e.g. routers, gateways, ISPs, DNSs) and replies coming from different parties.
 - Etherogeneous protocols and technologies :: A wide range of protocols and technologies is adopted in networking (and computing in general), and the joint points of this different architectures are the perfect spot for vulnerabilties.
 - Legacy issues :: Adoption of new versions of protocols is slow, often hosts have to lower their security level for interoperability and expose themself to risks (e.g. IPv6 and IPv4).

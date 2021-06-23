@@ -34,7 +34,7 @@ From the security point of view, WLAN protocols try to deliver
 An AP advertises its WLAN by sending, every 50ms, beacons with the SSID.
 - Joining phase :: An unauthenticated and unassociated STA that wants to join the WLAN must
   - Intercept the beacon and send an authentication request (just an empty message)
-  - When confirmed buy the AP, send an association request
+  - When confirmed by the AP, send an association request
 - Leaving phase :: Both STAs and APs that leave a WLAN must explicitly state it, either with a disassociation or deauthentication notification.
 
 * WPA2
